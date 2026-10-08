@@ -1,0 +1,194 @@
+import { useEffect, useState } from 'react';
+import {
+  Activity, ArrowLeft, ArrowRight, Database, FileUp, Filter, LayoutDashboard,
+  MapPinned, Plus, Search, ShieldCheck, Trash2, X, AlertCircle, CheckCircle2,
+} from 'lucide-react';
+import { CATEGORIES, STATUSES, changeStatus, createIncident, importIncidents, listIncidents, removeIncident } from './api';
+
+const initialFilters = { category: '', status: '', q: '', limit: 10, offset: 0 };
+
+function initialForm() {
+  const now = new Date();
+  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 16);
+  return {
+    category: 'Theft', occurred_at: localTime, latitude: '11.9345', longitude: '79.8302',
+    police_station: '', description: '', status: 'reported',
+  };
+}
+
+function formattedDate(iso) {
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata',
+  }).format(new Date(iso));
+}
+
+function statusLabel(key) {
+  return STATUSES.find(([value]) => value === key)?.[1] || key;
+}
+
+function App() {
+  const [filters, setFilters] = useState(initialFilters);
+  const [data, setData] = useState({ items: [], total: 0, limit: 10, offset: 0 });
+  const [form, setForm] = useState(initialForm);
+  const [isOpen, setIsOpen] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    listIncidents(filters, controller.signal)
+      .then((result) => { setData(result); setLoading(false); })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setNotice({ type: 'error', text: error.message });
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [filters, refresh]);
+
+  function changeFilter(key, value) {
+    setFilters((current) => ({ ...current, [key]: value, offset: 0 }));
+  }
+
+  function feedback(type, text) {
+    setNotice({ type, text });
+  }
+
+  async function submitIncident(event) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await createIncident({
+        ...form,
+        occurred_at: new Date(form.occurred_at).toISOString(),
+        latitude: Number(form.latitude),
+        longitude: Number(form.longitude),
+        police_station: form.police_station || null,
+        description: form.description || null,
+      });
+      feedback('success', 'Synthetic incident added successfully.');
+      setIsOpen(false);
+      setForm(initialForm());
+      setRefresh((value) => value + 1);
+    } catch (error) {
+      feedback('error', error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImport(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const result = await importIncidents(file);
+      feedback('success', `${result.imported} synthetic records imported successfully.`);
+      setRefresh((value) => value + 1);
+    } catch (error) {
+      feedback('error', error.message);
+    } finally {
+      setBusy(false);
+      event.target.value = '';
+    }
+  }
+
+  async function handleStatus(id, nextStatus) {
+    setBusy(true);
+    try {
+      await changeStatus(id, nextStatus);
+      feedback('success', 'Incident status updated.');
+      setRefresh((value) => value + 1);
+    } catch (error) {
+      feedback('error', error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm('Delete this synthetic incident permanently?')) return;
+    setBusy(true);
+    try {
+      await removeIncident(id);
+      feedback('success', 'Synthetic incident deleted.');
+      setRefresh((value) => value + 1);
+    } catch (error) {
+      feedback('error', error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar" aria-label="Primary navigation">
+        <div className="logo"><span className="logo-symbol"><MapPinned size={22} /></span><span>Crime<span className="accent">Map</span><small>INTELLIGENCE PLATFORM</small></span></div>
+        <div className="nav-title">WORKSPACE</div>
+        <div className="nav-item selected"><Database size={17} /> Incidents <span className="nav-current">01</span></div>
+        <div className="nav-item muted"><MapPinned size={17} /> Crime map <span className="coming">Soon</span></div>
+        <div className="nav-item muted"><LayoutDashboard size={17} /> Analytics <span className="coming">Soon</span></div>
+        <div className="nav-item muted"><Activity size={17} /> Hotspots <span className="coming">Soon</span></div>
+        <div className="sidebar-bottom"><ShieldCheck size={17} /><span>Development workspace<small>All incidents are synthetic</small></span></div>
+      </aside>
+
+      <main className="main-area">
+        <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> Data management <span>/</span> <strong>Incidents</strong></span><span className="env-label"><span className="live-dot" /> DEVELOPMENT</span></header>
+        <div className="content">
+          <div className="heading-row">
+            <div><div className="eyebrow">MODULE 01 · INCIDENT MANAGEMENT</div><h1>Crime incident records</h1><p className="intro">Manage location-based incident data for mapping and analysis.</p></div>
+            <button className="button primary" onClick={() => setIsOpen(true)}><Plus size={17} /> Add incident</button>
+          </div>
+
+          <div className="demo-warning"><AlertCircle size={19} /><div><strong>Synthetic demonstration data</strong><span>These records are generated for development and testing. They do not represent real crimes or police reports in Puducherry.</span></div></div>
+
+          {notice && <div className={`notice ${notice.type}`} role="status">{notice.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span>{notice.text}</span><button aria-label="Dismiss message" onClick={() => setNotice(null)}><X size={16} /></button></div>}
+
+          <section className="stats-grid" aria-label="Incident overview">
+            <div className="stat"><div className="stat-top"><span>Matching incidents</span><Database size={18} /></div><strong>{data.total}</strong><small>Records matching filters</small></div>
+            <div className="stat"><div className="stat-top"><span>Showing on page</span><Filter size={18} /></div><strong>{data.items.length}</strong><small>Page size: {filters.limit} incidents</small></div>
+            <div className="stat"><div className="stat-top"><span>Data classification</span><ShieldCheck size={18} /></div><strong className="stat-word">Synthetic</strong><small>Demo / testing only</small></div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-heading"><div><h2>Incident registry</h2><p>Search and filter the records in your database.</p></div><span className="record-tag">{data.total} records</span></div>
+            <div className="filters">
+              <label className="search-field"><Search size={18} /><input aria-label="Search description or zone" placeholder="Search description or zone…" value={filters.q} onChange={(e) => changeFilter('q', e.target.value)} /></label>
+              <select aria-label="Filter by category" value={filters.category} onChange={(e) => changeFilter('category', e.target.value)}><option value="">All crime categories</option>{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select>
+              <select aria-label="Filter by status" value={filters.status} onChange={(e) => changeFilter('status', e.target.value)}><option value="">All statuses</option>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+              <button className="button subtle" onClick={() => setFilters(initialFilters)} title="Reset filters"><X size={16} /> Clear</button>
+            </div>
+            <div className="table-wrap"><table><thead><tr><th>INCIDENT ID</th><th>CATEGORY</th><th>DATE & TIME (IST)</th><th>AREA / ZONE</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>
+              {loading ? <tr><td colSpan={6} className="empty">Loading incidents…</td></tr> : data.items.length === 0 ? <tr><td colSpan={6} className="empty">No incidents found. Add one or import the sample dataset.</td></tr> : data.items.map((incident) => <tr key={incident.id}>
+                <td><strong className="mono">{incident.id.startsWith('DEMO-') ? incident.id : incident.id.slice(0, 8)}</strong><span className="subcell">Synthetic record</span></td>
+                <td><span className="category-chip">{incident.category}</span></td>
+                <td>{formattedDate(incident.occurred_at)}</td>
+                <td>{incident.police_station || '—'}<span className="subcell mono">{incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}</span></td>
+                <td><span className={`status-tag ${incident.status}`}>{statusLabel(incident.status)}</span></td>
+                <td><div className="actions"><select disabled={busy} aria-label={`Change status of ${incident.id}`} value={incident.status} onChange={(e) => handleStatus(incident.id, e.target.value)}>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button disabled={busy} className="icon-button" aria-label={`Delete ${incident.id}`} title="Delete synthetic incident" onClick={() => handleDelete(incident.id)}><Trash2 size={16} /></button></div></td>
+              </tr>)}</tbody></table></div>
+            <div className="table-footer"><span>Showing {data.total ? data.offset + 1 : 0}–{Math.min(data.offset + data.items.length, data.total)} of {data.total}</span><div className="pagination"><button className="button subtle" disabled={filters.offset === 0 || loading} onClick={() => setFilters((current) => ({ ...current, offset: Math.max(0, current.offset - current.limit) }))}><ArrowLeft size={15} /> Previous</button><button className="button subtle" disabled={filters.offset + filters.limit >= data.total || loading} onClick={() => setFilters((current) => ({ ...current, offset: current.offset + current.limit }))}>Next <ArrowRight size={15} /></button></div></div>
+          </section>
+
+          <section className="import-panel"><div className="import-icon"><FileUp size={21} /></div><div><h3>Import incident data</h3><p>Upload a CSV or JSON file containing up to 1,000 synthetic records (maximum 2 MB). All rows are checked before anything is imported.</p><a href="/sample-data/synthetic_incidents.csv" download>Download example CSV</a></div><label className={`button outline upload-button ${busy ? 'disabled' : ''}`}><FileUp size={16} /> {busy ? 'Please wait…' : 'Choose file'}<input disabled={busy} aria-label="Import CSV or JSON incidents" type="file" accept=".csv,.json" onChange={handleImport} hidden /></label></section>
+          <footer className="footer">CrimeMap · Module 01 <span>Designed for geospatial intelligence prototyping · No real incident data</span></footer>
+        </div>
+      </main>
+
+      {isOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setIsOpen(false); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="modal-heading"><div><div className="eyebrow">SYNTHETIC INCIDENT</div><h2 id="form-title">Add a record</h2></div><button className="icon-button" disabled={busy} aria-label="Close form" onClick={() => setIsOpen(false)}><X size={20} /></button></div><form onSubmit={submitIncident}>
+        <div className="modal-fields"><label>Crime category<select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label>Date and time (your local time)<input type="datetime-local" required value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })} /></label>
+        <div className="form-grid"><label>Latitude<input type="number" step="any" min="-90" max="90" required value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} /></label><label>Longitude<input type="number" step="any" min="-180" max="180" required value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} /></label></div>
+        <label>Demonstration zone (optional)<input type="text" maxLength={120} placeholder="e.g. Demo Zone A" value={form.police_station} onChange={(e) => setForm({ ...form, police_station: e.target.value })} /></label>
+        <label>Notes (optional)<textarea rows={3} maxLength={2000} placeholder="Synthetic test description…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+        <label>Status<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        </div><div className="modal-footer"><button type="button" className="button subtle" disabled={busy} onClick={() => setIsOpen(false)}>Cancel</button><button className="button primary" disabled={busy} type="submit"><Plus size={17} /> {busy ? 'Saving…' : 'Create record'}</button></div></form></div></div>}
+    </div>
+  );
+}
+
+export default App;
