@@ -1,55 +1,50 @@
-# Module 02 — Interactive Crime Map
+# Module 02 — Unified Crime Map & Spatial Analysis
 
-This is an **incremental update** to the existing CrimeMap Module 01 project. Module 01 remains available through the sidebar.
+**Branch:** `dev/shwetha` in `aeroslayys/CrimeMap`. This is a single Leaflet workspace, not separate Crime Map and Hotspots pages.
 
-## Features
+> All bundled observations are **SYNTHETIC DEMONSTRATION DATA**. Maps, density, grid counts and rankings describe fictional test data, not validated crime hotspots, risk estimates or forecasts. The rectangular grid study extent is not an official Puducherry boundary.
 
-- Leaflet map centered on Puducherry with OpenStreetMap basemap attribution.
-- Color-coded crime markers with clustered grouping; click markers for safe HTML-escaped popups.
-- Marker / heatmap toggle. The heatmap shows **synthetic point density**, not real crime hotspots or predictions.
-- Crime category and case status filters; automatically reloads reports when the viewport changes.
-- Side panel showing the latest eight visible incidents, with Locate buttons.
-- `/api/map/incidents` bounded GeoJSON API: latitude and longitude bounds, category/status filters, and a maximum of 2000 returned features; warns when truncated.
-- Four API tests for query/filter/validation and GeoJSON behavior.
+## Three visualization modes
 
-## Apply the module update
+1. **Markers** — color-coded incident markers and automatic clustering, with safe text-only popups. Visible incidents are fetched by the current viewport, sorted newest first in the sidebar.
+2. **Density heatmap** — browser-rendered `leaflet.heat` visualization of the same viewport incidents. This is an illustrative point-density display, not statistical hotspot analysis.
+3. **Grid analysis** — backend-calculated concentration cells rendered as GeoJSON polygons on **the same Leaflet map**. Features include ranked cell counts, approximate density per nominal square kilometer, a defined study extent, minimum-count threshold, date/zone filters, cell-size selection, focus/fit controls, and GeoJSON export.
 
-Back up or commit any local changes before extracting. The ZIP contains only files added or modified by this module.
+The shared category and status filters apply to all modes. Date and demonstration-zone filters apply **only** to grid analysis because the existing viewport API does not support them. The grid is calculated across all matching records in a fixed study extent, independent of current viewport. All derived results remain read-only.
 
-From your local Git repository root on Fedora/Fish:
+## API and data integrity
 
-```fish
-cd ~/Documents/Repos/CrimeMap-work
-git switch dev/shwetha
-# Extract the update ZIP into this directory, preserving the backend/ and frontend/ paths.
-cd frontend
-npm install
-npm run dev
-```
+- `GET /api/map/incidents` — existing bounded GeoJSON viewport query; max 2,000 returned incidents and truncation flag.
+- `GET /api/hotspots/grid` — existing filtered fixed-grid concentration aggregates and metadata; limits/parameters are unchanged.
+- `GET /api/analytics/filters` — available demonstration zones for grid controls.
 
-The backend process must also be running with `python -m uvicorn app.main:app --reload --port 8000` from `backend/` after activating `source .venv/bin/activate.fish`. No database migration is needed.
+No database changes, migrations, or reseeding are required. The backend retains the original `/api/hotspots/grid` endpoint because grid analysis is a distinct aggregation algorithm, even though its UI now appears within the Crime Map.
 
-Run API tests:
+## Test locally (Fedora, Fish)
 
 ```fish
 cd ~/Documents/Repos/CrimeMap-work/backend
 source .venv/bin/activate.fish
 python -m pytest -q
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Then navigate in the app: **Crime map** in the sidebar.
+In a second terminal:
 
-### New API endpoint
+```fish
+cd ~/Documents/Repos/CrimeMap-work/frontend
+npm install
+npm run build
+npm run dev
+```
 
-`GET /api/map/incidents?south=11.9&west=79.8&north=12.0&east=79.9&limit=2000`
+Open `http://localhost:5173/`. Navigate to **Map & spatial analysis**, verify all three modes, category/status filters, grid thresholds, cell selection, fit, downloads, and mobile layout.
 
-Optional query arguments: `category` and `status`. The response is a `FeatureCollection` with GeoJSON Point features and a top-level `meta` containing `total`, `returned`, `truncated`, and `source_type: synthetic`.
+## Design and accessibility notes
 
-> All shipped observations are fictional. If this app ever uses real incident-level coordinates, restrict access to authorized police users and assess re-identification and sensitive location risks. This prototype has no auth and is not suitable for live policing.
+- Uses one Leaflet instance; changing modes replaces only the data overlay.
+- Larger interface text, darker-background contrast improvements, visible focus outlines, responsive map controls.
+- Popup content is set using DOM `textContent` rather than injecting user-controlled HTML.
+- OpenStreetMap tile attribution stays visible; public tiles require internet access and responsible use.
 
-### Limitations
-
-- Map basemap tiles require internet access.
-- Browser cluster/heatmap rendering is intended for demonstration-sized datasets, not millions of points.
-- Zoomed-out or dateline-crossing viewports are outside this Puducherry-focused MVP's supported bounds query.
-- Frontend production build depends on the new `leaflet`, `leaflet.markercluster`, and `leaflet.heat` packages being installed with npm.
+Do not operationalize this prototype with real incident-level data without authorization, access controls, location/privacy safeguards and a validated analysis methodology.
