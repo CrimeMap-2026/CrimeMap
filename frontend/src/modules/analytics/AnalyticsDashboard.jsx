@@ -9,7 +9,7 @@ import './analytics.css';
 
 const INITIAL_FILTERS = { start_date: '', end_date: '', category: '', status: '', zone: '' };
 const STATUS_COLORS = ['#e7bf61', '#6fb6ff', '#68c9ab'];
-const axis = { fill: '#a3b8cf', fontSize: 11 };
+const axis = { fill: '#a3b8cf', fontSize: 13 };
 const tooltipStyle = { background: '#13243a', border: '1px solid #36506e', borderRadius: 8, color: '#e7edf8' };
 const statusName = (value) => STATUSES.find(([key]) => key === value)?.[1] || value;
 const number = (value) => value.toLocaleString('en-IN');
@@ -43,7 +43,7 @@ function CountBars({ rows, color = '#6fb6ff', horizontal = false }) {
           <YAxis allowDecimals={false} tick={axis} width={36} />
         </>}
         <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#e7edf8' }} cursor={{ fill: '#ffffff08' }} formatter={value => [number(value), 'Incidents']} />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Legend wrapperStyle={{ fontSize: 14 }} />
         <Bar dataKey="count" name="Incidents" fill={color} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
@@ -141,7 +141,7 @@ export default function AnalyticsDashboard({ refresh = 0 }) {
           <div className="analytics-donut"><ResponsiveContainer width="100%" height="100%"><PieChart accessibilityLayer>
             <Pie data={statuses} dataKey="count" nameKey="label" innerRadius="48%" outerRadius="72%" paddingAngle={2} stroke="#101b2b" isAnimationActive={false}>{statuses.map((row, index) => <Cell key={row.key} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />)}</Pie>
             <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#e7edf8' }} formatter={(value, name) => [`${number(value)} (${(value / summary.total_incidents * 100).toFixed(1)}%)`, name]} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 14 }} />
           </PieChart></ResponsiveContainer></div>
         </ChartCard>
         <ChartCard title="Incident trends over time" subtitle={`Counts by ${data.trend_interval} · Asia/Kolkata (IST) · zero-count periods included`} rows={dates} wide>
@@ -150,7 +150,7 @@ export default function AnalyticsDashboard({ refresh = 0 }) {
             <XAxis dataKey="label" tick={axis} minTickGap={35} interval="preserveStartEnd" padding={{ left: 32, right: 32 }} />
             <YAxis tick={axis} allowDecimals={false} width={36} />
             <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#e7edf8' }} formatter={value => [number(value), 'Incidents']} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 14 }} />
             <Area type="linear" dataKey="count" name="Incidents" stroke="#68c9d8" fill="#68c9d8" fillOpacity={0.15} dot={{ r: dates.length < 32 ? 3 : 0 }} isAnimationActive={false} />
           </AreaChart></ResponsiveContainer></div>
         </ChartCard>
