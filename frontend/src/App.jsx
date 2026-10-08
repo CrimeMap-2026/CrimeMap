@@ -140,7 +140,7 @@ function App() {
       </aside>
 
       <main className="main-area">
-        <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> {view === 'map' ? 'Geospatial view' : view === 'analytics' ? 'Analysis' : 'Data management'} <span>/</span> <strong>{view === 'map' ? 'Crime map' : view === 'analytics' ? 'Analytics' : 'Incidents'}</strong></span><span className="env-label"><span className="live-dot" /> DEVELOPMENT</span></header>
+        <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> {view === 'map' ? 'Geospatial view' : view === 'analytics' ? 'Analysis' : 'Data management'} <span>/</span> <strong>{view === 'map' ? 'Map & spatial analysis' : view === 'analytics' ? 'Analytics' : 'Incidents'}</strong></span><span className="env-label"><span className="live-dot" /> DEVELOPMENT</span></header>
         <div className="content">
           {view === 'analytics' ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} /> : <>
           <div className="heading-row">
