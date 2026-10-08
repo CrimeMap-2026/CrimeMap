@@ -88,3 +88,11 @@ export function fetchAnalytics(filters, signal) {
 export function fetchAnalyticsFilters(signal) {
   return request('/api/analytics/filters', { signal });
 }
+
+export function fetchHotspots(filters, signal) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) query.set(key, value);
+  }
+  return request(`/api/hotspots/grid?${query}`, { signal });
+}
