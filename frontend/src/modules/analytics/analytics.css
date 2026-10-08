@@ -38,3 +38,14 @@
   .analytics-filters label { flex-basis: 100%; }
   .analytics-chart-body { padding: 0 4px; }
 }
+
+
+/* Readability: keep chart captions and filters usable at normal browser zoom. */
+.analytics-filters label { font-size: 14px; color: #c4d4e8; }
+.analytics-filters input, .analytics-filters select { min-height: 44px; font-size: 14px; }
+.analytics-filter-note, .analytics-footnote { font-size: 13px; color: #b3c6de; }
+.analytics-values { font-size: 14px; color: #c7d9ee; }
+.analytics-values caption { font-size: 13px; }
+.analytics-chart-label { font-size: 12px; color: #e8c58e; }
+.analytics-state p { font-size: 14px; }
+.analytics-chart-card .recharts-cartesian-axis-tick-value { fill: #bed2e9; }
