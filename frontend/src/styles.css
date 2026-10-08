@@ -5,3 +5,13 @@
 @media(max-width:1080px){.sidebar{width:192px}.content{padding:30px 22px}.topbar{padding:0 22px}.filters select{flex:1}.filters .button{flex:0}}
 @media(max-width:780px){.app-shell{display:block}.sidebar{min-height:0;width:auto;padding:13px 16px;border-bottom:1px solid #253247;flex-direction:row;align-items:center;justify-content:space-between}.sidebar .nav-title,.sidebar .nav-item,.sidebar-bottom{display:none}.topbar{height:55px;padding:0 17px}.content{padding:25px 16px}.heading-row{align-items:flex-start}.stats-grid{grid-template-columns:1fr 1fr}.stats-grid .stat:last-child{grid-column:1/-1}.import-panel{align-items:flex-start;flex-wrap:wrap}.import-panel .upload-button{margin-left:59px}.footer{flex-direction:column;gap:5px}}
 @media(max-width:520px){h1{font-size:22px}.heading-row{flex-direction:column;align-items:stretch}.heading-row .button{align-self:flex-start}.topbar .env-label{display:none}.stats-grid{grid-template-columns:1fr}.stats-grid .stat:last-child{grid-column:auto}.filters{padding:0 15px 18px}.filters select,.filters .search-field{min-width:100%;flex:1}.panel-heading{padding:20px 15px 17px}.table-footer{padding:14px;flex-wrap:wrap}.modal-fields{padding:16px}.form-grid{grid-template-columns:1fr}.logo{font-size:18px}.import-panel{padding:16px}.import-icon{display:none}.import-panel .upload-button{margin-left:0}}
+
+/* Module navigation: real buttons, keyboard accessible. */
+.sidebar button.nav-item{width:100%;border:0;background:transparent;text-align:left;font-family:inherit;cursor:pointer}
+.sidebar button.nav-item.selected{background:#112a45;color:#91c7ff;box-shadow:inset 2px 0 #479df6;font-weight:700}
+.sidebar button.nav-item:hover:not(.selected){background:#12263f;color:#d1e3fa}
+.sidebar button.nav-item:focus-visible{outline:2px solid #72b6ff;outline-offset:2px}
+@media(max-width:780px){.sidebar button.nav-item{display:flex;width:auto;padding:9px 10px;font-size:11px}.sidebar .logo{margin-right:auto}.sidebar .nav-current{display:none}}
+@media(max-width:520px){.sidebar button.nav-item{gap:5px}.sidebar button.nav-item svg{display:none}}
+/* Keep all three module links available on narrow screens. */
+@media(max-width:780px){.sidebar{flex-wrap:wrap;gap:5px}.sidebar .logo{flex-basis:100%;margin-bottom:8px}.sidebar button.nav-item{flex:1;justify-content:center}}

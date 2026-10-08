@@ -6,12 +6,15 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
 from app.main import app
+import app.main as main_module
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     test_engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(bind=test_engine)
+    # App lifespan must use the test database too, never the developer's file.
+    monkeypatch.setattr(main_module, "engine", test_engine)
 
     def override_db():
         with Session(test_engine, expire_on_commit=False) as session:

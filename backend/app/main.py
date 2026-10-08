@@ -1,4 +1,4 @@
-"""CrimeMap Module 01: incident CRUD, validation, and atomic CSV/JSON import."""
+"""CrimeMap API: incident management and bounded geospatial map queries."""
 import csv
 import io
 import json
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db
 from .models import Incident
+from .analytics import router as analytics_router
 from .schemas import Category, ImportResult, IncidentCreate, IncidentPage, IncidentPatch, IncidentRead, Status
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
@@ -26,6 +27,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="CrimeMap API", version="0.1.0", lifespan=lifespan)
+app.include_router(analytics_router)
 
 
 def to_utc_string(item: IncidentCreate) -> str:
@@ -85,6 +87,65 @@ def list_incidents(
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     records = db.scalars(query.order_by(Incident.occurred_at.desc(), Incident.id).offset(offset).limit(limit)).all()
     return IncidentPage(items=[to_read(rec) for rec in records], total=total, limit=limit, offset=offset)
+
+
+@app.get("/api/map/incidents")
+def map_incidents(
+    db: Annotated[Session, Depends(get_db)],
+    south: Annotated[float, Query(ge=-90, le=90, allow_inf_nan=False)],
+    west: Annotated[float, Query(ge=-180, le=180, allow_inf_nan=False)],
+    north: Annotated[float, Query(ge=-90, le=90, allow_inf_nan=False)],
+    east: Annotated[float, Query(ge=-180, le=180, allow_inf_nan=False)],
+    category: Category | None = None,
+    status: Status | None = None,
+    limit: Annotated[int, Query(ge=1, le=2000)] = 2000,
+):
+    """Return GeoJSON points inside one viewport; never imply the data is official.
+
+    The MVP serves a bounded number of records. For city-scale production datasets,
+    replace this with PostGIS spatial indexes, clustering and/or vector tiles.
+    """
+    if south > north or west > east:
+        raise HTTPException(status_code=422, detail="Invalid bounds: south <= north and west <= east required")
+
+    query = select(Incident).where(
+        Incident.latitude >= south,
+        Incident.latitude <= north,
+        Incident.longitude >= west,
+        Incident.longitude <= east,
+    )
+    if category is not None:
+        query = query.where(Incident.category == category.value)
+    if status is not None:
+        query = query.where(Incident.status == status.value)
+
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    records = db.scalars(query.order_by(Incident.occurred_at.desc(), Incident.id).limit(limit)).all()
+    return {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "id": record.id,
+                "geometry": {"type": "Point", "coordinates": [record.longitude, record.latitude]},
+                "properties": {
+                    "category": record.category,
+                    "occurred_at": record.occurred_at,
+                    "police_station": record.police_station,
+                    "description": record.description,
+                    "status": record.status,
+                    "source_type": record.source_type,
+                },
+            }
+            for record in records
+        ],
+        "meta": {
+            "total": total,
+            "returned": len(records),
+            "truncated": total > len(records),
+            "source_type": "synthetic",
+        },
+    }
 
 
 @app.post("/api/incidents", response_model=IncidentRead, status_code=201)

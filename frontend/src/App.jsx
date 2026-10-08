@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   Activity, ArrowLeft, ArrowRight, Database, FileUp, Filter, LayoutDashboard,
   MapPinned, Plus, Search, ShieldCheck, Trash2, X, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import { CATEGORIES, STATUSES, changeStatus, createIncident, importIncidents, listIncidents, removeIncident } from './api';
+import CrimeMap from './modules/map/CrimeMap.jsx';
+
+const AnalyticsDashboard = lazy(() => import('./modules/analytics/AnalyticsDashboard.jsx'));
 
 const initialFilters = { category: '', status: '', q: '', limit: 10, offset: 0 };
 
@@ -28,6 +31,7 @@ function statusLabel(key) {
 }
 
 function App() {
+  const [view, setView] = useState('incidents');
   const [filters, setFilters] = useState(initialFilters);
   const [data, setData] = useState({ items: [], total: 0, limit: 10, offset: 0 });
   const [form, setForm] = useState(initialForm);
@@ -129,16 +133,17 @@ function App() {
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="logo"><span className="logo-symbol"><MapPinned size={22} /></span><span>Crime<span className="accent">Map</span><small>INTELLIGENCE PLATFORM</small></span></div>
         <div className="nav-title">WORKSPACE</div>
-        <div className="nav-item selected"><Database size={17} /> Incidents <span className="nav-current">01</span></div>
-        <div className="nav-item muted"><MapPinned size={17} /> Crime map <span className="coming">Soon</span></div>
-        <div className="nav-item muted"><LayoutDashboard size={17} /> Analytics <span className="coming">Soon</span></div>
+        <button type="button" className={`nav-item ${view === 'incidents' ? 'selected' : ''}`} onClick={() => setView('incidents')}><Database size={17} /> Incidents <span className="nav-current">01</span></button>
+        <button type="button" className={`nav-item ${view === 'map' ? 'selected' : ''}`} onClick={() => setView('map')}><MapPinned size={17} /> Crime map <span className="nav-current">02</span></button>
+        <button type="button" className={`nav-item ${view === 'analytics' ? 'selected' : ''}`} aria-current={view === 'analytics' ? 'page' : undefined} onClick={() => setView('analytics')}><LayoutDashboard size={17} /> Analytics <span className="nav-current">03</span></button>
         <div className="nav-item muted"><Activity size={17} /> Hotspots <span className="coming">Soon</span></div>
         <div className="sidebar-bottom"><ShieldCheck size={17} /><span>Development workspace<small>All incidents are synthetic</small></span></div>
       </aside>
 
       <main className="main-area">
-        <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> Data management <span>/</span> <strong>Incidents</strong></span><span className="env-label"><span className="live-dot" /> DEVELOPMENT</span></header>
+        <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> {view === 'map' ? 'Geospatial view' : view === 'analytics' ? 'Analysis' : 'Data management'} <span>/</span> <strong>{view === 'map' ? 'Crime map' : view === 'analytics' ? 'Analytics' : 'Incidents'}</strong></span><span className="env-label"><span className="live-dot" /> DEVELOPMENT</span></header>
         <div className="content">
+          {view === 'analytics' ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} /> : <>
           <div className="heading-row">
             <div><div className="eyebrow">MODULE 01 · INCIDENT MANAGEMENT</div><h1>Crime incident records</h1><p className="intro">Manage location-based incident data for mapping and analysis.</p></div>
             <button className="button primary" onClick={() => setIsOpen(true)}><Plus size={17} /> Add incident</button>
@@ -175,7 +180,8 @@ function App() {
           </section>
 
           <section className="import-panel"><div className="import-icon"><FileUp size={21} /></div><div><h3>Import incident data</h3><p>Upload a CSV or JSON file containing up to 1,000 synthetic records (maximum 2 MB). All rows are checked before anything is imported.</p><a href="/sample-data/synthetic_incidents.csv" download>Download example CSV</a></div><label className={`button outline upload-button ${busy ? 'disabled' : ''}`}><FileUp size={16} /> {busy ? 'Please wait…' : 'Choose file'}<input disabled={busy} aria-label="Import CSV or JSON incidents" type="file" accept=".csv,.json" onChange={handleImport} hidden /></label></section>
-          <footer className="footer">CrimeMap · Module 01 <span>Designed for geospatial intelligence prototyping · No real incident data</span></footer>
+          <footer className="footer">CrimeMap · Modules 01–03 <span>Designed for geospatial intelligence prototyping · No real incident data</span></footer>
+          </>}
         </div>
       </main>
 

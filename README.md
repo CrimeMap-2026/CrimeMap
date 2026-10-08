@@ -1,8 +1,24 @@
-# CrimeMap — Module 01: Crime Incident Management
+# CrimeMap — Modules 01–03: Incidents, Interactive Map & Analytics
 
 A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intelligence, Analytics & Decision-Support System**. This version is **for local development only**.
 
 > **Data warning:** Every bundled incident is **synthetic**. The coordinates, incident types, zones, and timestamps were invented to test application behavior. They do **not** describe real Puducherry crimes. Do not use this build for operational policing or public crime claims.
+
+## Module 03 — Crime Analytics Dashboard
+
+- Open **Analytics** in the existing sidebar on desktop, tablet, or mobile.
+- Four summary cards and five charts cover matching incidents, categories, statuses, local occurrence dates/hours, and demonstration zones.
+- Filter by inclusive IST date range, category, status, and named or unspecified zone. Every chart uses the same database filters, without pagination limits.
+- All views are labeled **SYNTHETIC DEMONSTRATION DATA**, with loading, retry, empty states, and accessible chart data tables.
+- Analytics is read-only; no schema migration, reseeding, or database replacement is needed. See [MODULE03.md](MODULE03.md) for API semantics and validation details.
+
+## Module 02 — Geospatial Crime Map
+
+- View incidents as color-coded **Leaflet markers** with automatic clustering, or switch to a **synthetic density heatmap**.
+- Filter map records by crime category and case status, click markers for details, and use the sidebar to locate visible reports.
+- The frontend requests GeoJSON for the **current map extent** from `GET /api/map/incidents`, rather than showing only the first registry page.
+- The map API enforces bounding coordinates and a 2,000-feature limit with a truncation warning.
+- All points are fictional examples. See [MODULE02.md](MODULE02.md) for detailed upgrade instructions.
 
 ## Included in Module 01
 
@@ -21,16 +37,15 @@ Use Python 3.11+:
 cd backend
 python -m venv .venv
 # macOS/Linux:
-source .venv/bin/activate
+source .venv/bin/activate  # Bash / Zsh. Fish: source .venv/bin/activate.fish
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
-python -m scripts.seed_demo
 uvicorn app.main:app --reload --port 8000
 ```
 
 The API is at `http://127.0.0.1:8000` and the Swagger documentation is at `http://127.0.0.1:8000/docs`.
 
-`crimemap.db` is created in the `backend/` directory automatically on first startup or seeding. Running the seed script multiple times won't duplicate the 36 demo records.
+`crimemap.db` is created in the `backend/` directory automatically on first startup. Keep your existing database when upgrading modules. For a **new development database only**, you can optionally run `python -m scripts.seed_demo`; it won't duplicate the bundled 36 demo IDs.
 
 ### Optional PostgreSQL
 
@@ -86,6 +101,9 @@ For demonstration safety, the API **always** sets `source_type` to `synthetic`, 
 | PATCH | `/api/incidents/{id}` | Change status and/or description |
 | DELETE | `/api/incidents/{id}` | Delete an incident |
 | POST | `/api/incidents/import` | Upload CSV or JSON as multipart `file` |
+| GET | `/api/map/incidents` | Bounding-box GeoJSON with category/status filters, up to 2,000 points |
+| GET | `/api/analytics/overview` | Complete filtered summary and category/status/date/hour/zone aggregates |
+| GET | `/api/analytics/filters` | Category/status choices and distinct synthetic demonstration zones |
 
 ## Folder structure
 
@@ -106,4 +124,4 @@ CrimeMap/
 
 This MVP intentionally has **no authentication** and supports only synthetic records. Before using any real police data, implement officer authentication, role-based permissions, audit logs, encryption, retention/access policies, and written authorization. Avoid storing victim/witness names or addresses in the demo. A future authorized import pipeline must explicitly identify provenance and prevent unverified records being presented as official.
 
-**Next:** Module 02 can read `GET /api/incidents` to build Leaflet incident markers, clusters, and filters. The API's `limit` is capped at 200; large geospatial datasets will require a dedicated bounded map query or tiles rather than loading everything into the browser.
+**Next:** Future modules can add hotspot detection, spatial analysis, and decision support with documented methods and a synthetic data mode. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.

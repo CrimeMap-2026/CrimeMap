@@ -63,3 +63,28 @@ export function importIncidents(file) {
   form.append('file', file);
   return request('/api/incidents/import', { method: 'POST', body: form });
 }
+
+export function fetchMapIncidents(bounds, filters, signal) {
+  const query = new URLSearchParams({
+    south: String(bounds.south),
+    west: String(bounds.west),
+    north: String(bounds.north),
+    east: String(bounds.east),
+    limit: '2000',
+  });
+  if (filters.category) query.set('category', filters.category);
+  if (filters.status) query.set('status', filters.status);
+  return request(`/api/map/incidents?${query}`, { signal });
+}
+
+export function fetchAnalytics(filters, signal) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) query.set(key, value);
+  }
+  return request(`/api/analytics/overview?${query}`, { signal });
+}
+
+export function fetchAnalyticsFilters(signal) {
+  return request('/api/analytics/filters', { signal });
+}
