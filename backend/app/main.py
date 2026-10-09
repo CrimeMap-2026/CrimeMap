@@ -16,6 +16,7 @@ from .models import Incident
 from .analytics import router as analytics_router
 from .hotspots import router as hotspots_router
 from .operations import router as operations_router
+from .auth import router as auth_router, require_permission
 from .schemas import Category, ImportResult, IncidentCreate, IncidentPage, IncidentPatch, IncidentRead, Status
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
@@ -32,6 +33,7 @@ app = FastAPI(title="CrimeMap API", version="0.1.0", lifespan=lifespan)
 app.include_router(analytics_router)
 app.include_router(hotspots_router)
 app.include_router(operations_router)
+app.include_router(auth_router)
 
 
 def to_utc_string(item: IncidentCreate) -> str:
@@ -71,7 +73,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/api/incidents", response_model=IncidentPage)
+@app.get("/api/incidents", response_model=IncidentPage, dependencies=[Depends(require_permission("read"))])
 def list_incidents(
     db: Annotated[Session, Depends(get_db)],
     category: Category | None = None,
@@ -93,7 +95,7 @@ def list_incidents(
     return IncidentPage(items=[to_read(rec) for rec in records], total=total, limit=limit, offset=offset)
 
 
-@app.get("/api/map/incidents")
+@app.get("/api/map/incidents", dependencies=[Depends(require_permission("read"))])
 def map_incidents(
     db: Annotated[Session, Depends(get_db)],
     south: Annotated[float, Query(ge=-90, le=90, allow_inf_nan=False)],
@@ -152,7 +154,7 @@ def map_incidents(
     }
 
 
-@app.post("/api/incidents", response_model=IncidentRead, status_code=201)
+@app.post("/api/incidents", response_model=IncidentRead, status_code=201, dependencies=[Depends(require_permission("write"))])
 def add_incident(payload: IncidentCreate, db: Annotated[Session, Depends(get_db)]):
     record = new_record(payload)
     db.add(record)
@@ -160,7 +162,7 @@ def add_incident(payload: IncidentCreate, db: Annotated[Session, Depends(get_db)
     return to_read(record)
 
 
-@app.get("/api/incidents/{incident_id}", response_model=IncidentRead)
+@app.get("/api/incidents/{incident_id}", response_model=IncidentRead, dependencies=[Depends(require_permission("read"))])
 def get_incident(incident_id: str, db: Annotated[Session, Depends(get_db)]):
     record = db.get(Incident, incident_id)
     if record is None:
@@ -168,7 +170,7 @@ def get_incident(incident_id: str, db: Annotated[Session, Depends(get_db)]):
     return to_read(record)
 
 
-@app.patch("/api/incidents/{incident_id}", response_model=IncidentRead)
+@app.patch("/api/incidents/{incident_id}", response_model=IncidentRead, dependencies=[Depends(require_permission("write"))])
 def update_incident(incident_id: str, payload: IncidentPatch, db: Annotated[Session, Depends(get_db)]):
     record = db.get(Incident, incident_id)
     if record is None:
@@ -184,7 +186,7 @@ def update_incident(incident_id: str, payload: IncidentPatch, db: Annotated[Sess
     return to_read(record)
 
 
-@app.delete("/api/incidents/{incident_id}", status_code=204)
+@app.delete("/api/incidents/{incident_id}", status_code=204, dependencies=[Depends(require_permission("delete"))])
 def delete_incident(incident_id: str, db: Annotated[Session, Depends(get_db)]):
     record = db.get(Incident, incident_id)
     if record is None:
@@ -217,7 +219,7 @@ def decode_import(filename: str, raw: bytes) -> list[dict]:
     raise HTTPException(status_code=400, detail="Upload a .csv or .json file")
 
 
-@app.post("/api/incidents/import", response_model=ImportResult, status_code=201)
+@app.post("/api/incidents/import", response_model=ImportResult, status_code=201, dependencies=[Depends(require_permission("write"))])
 async def import_incidents(db: Annotated[Session, Depends(get_db)], file: UploadFile = File(...)):
     raw = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(raw) > MAX_UPLOAD_BYTES:
