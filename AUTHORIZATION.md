@@ -48,6 +48,16 @@ Visit http://127.0.0.1:5173 . Log in as the administrator and open **User manage
 
 **Important:** Existing developer databases with synthetic incidents are preserved. Adding the user and session tables does not replace or reseed incidents. No migration framework is bundled; `create_all` adds missing authentication tables for this prototype.
 
+## Local Vite login origins and proxy setup
+
+The frontend normally runs on `http://localhost:5173` or `http://127.0.0.1:5173`, while Vite forwards `/api` requests to FastAPI at `http://127.0.0.1:8000`. FastAPI may receive a forwarded `Host` header for port 8000, while the browser correctly sends the original page's `Origin` (port 5173). **Those two ports are intentionally different**.
+
+CrimeMap explicitly accepts those two exact local Vite origins **only when the backend's Host is also loopback**. Arbitrary cross-origin requests continue to receive HTTP 403. Same-origin browser requests are also accepted.
+
+For a non-local deployment behind a trusted reverse proxy, set `CRIMEMAP_TRUSTED_ORIGINS` to the exact HTTPS browser origins (comma-separated), for example `https://crimemap.example.org`. Never use a wildcard or permit untrusted domains. This configuration is not a substitute for HTTPS, host validation, correct proxy headers, CSRF protections, or the other production controls listed below.
+
+If your browser still reports “Cross-origin changes are not allowed” after updating the code, restart FastAPI and make sure you're opening the Vite frontend on one of the two documented local URLs. If Vite uses a different port, explicitly set the permitted origin in `CRIMEMAP_TRUSTED_ORIGINS` for development.
+
 ## Backend enforcement
 
 - `POST /api/auth/login` — validates password and issues an **HttpOnly**, `SameSite=Strict` session cookie with an eight-hour maximum lifetime.
