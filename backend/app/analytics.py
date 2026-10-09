@@ -10,10 +10,11 @@ from sqlalchemy import DateTime, String, cast, func, literal, select, union_all
 from sqlalchemy.orm import Session
 
 from .db import get_db
+from .auth import require_permission
 from .models import Incident
 from .schemas import Category, Status
 
-router = APIRouter(prefix="/api/analytics", tags=["analytics"])
+router = APIRouter(prefix="/api/analytics", tags=["analytics"], dependencies=[Depends(require_permission("analyze"))])
 LOCAL_TZ = ZoneInfo("Asia/Kolkata")
 DATA_LABEL = "SYNTHETIC DEMONSTRATION DATA"
 
