@@ -1,8 +1,18 @@
-# CrimeMap — Modules 01–03: Incidents, Unified Spatial Map & Analytics
+# CrimeMap — Modules 01–04: Incident Management, Spatial Map, Analytics & Demo Operations
 
 A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intelligence, Analytics & Decision-Support System**. This version is **for local development only**.
 
 > **Data warning:** Every bundled incident is **synthetic**. The coordinates, incident types, zones, and timestamps were invented to test application behavior. They do **not** describe real Puducherry crimes. Do not use this build for operational policing or public crime claims.
+
+## Module 04 — Synthetic Operational Overview (IPMCAP-inspired)
+
+- A new **Operations** sidebar page combines crime incidents, fictional accident points, hypothetical CCTV locations and simulated patrol history on a single OpenStreetMap/Leaflet map.
+- Toggle each layer independently; filter incident markers by category/status and pan/zoom the map to fetch viewport records from the existing incident API.
+- Drag the **patrol history** slider to view seven timestamped sample locations per fictional patrol, including an illustrative route trace.
+- Click a synthetic incident marker to inspect the straight-line distance to the nearest **demo** patrol position at the selected timeline snapshot. This is not road distance, travel time, dispatch guidance or a recommendation.
+- Four summary cards describe incident totals in the visible map area and the numbers of example patrols, cameras and accidents.
+- Read-only `GET /api/operations/overview` returns **static synthetic fixtures**: no real GPS, CCTV, accident services, emergency integrations, surveillance, authenticated accounts, or live status feeds.
+- Adapted from public **IPMCAP** feature descriptions (https://ipmcap.tspolice.gov.in/), not its private code or authenticated internal screens. See [MODULE04.md](MODULE04.md).
 
 ## Module 03 — Crime Analytics Dashboard
 
@@ -18,7 +28,7 @@ A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intell
 - Category/status filters are shared across all three modes; grid analysis also supports IST date range, demonstration zone, cell size and minimum-count threshold.
 - Grid analysis retains ranked cells, nominal per-km² density, metadata, map focus and GeoJSON export, all calculated server-side using the existing `GET /api/hotspots/grid` endpoint.
 - Markers and heatmap continue to request GeoJSON for the current viewport using `GET /api/map/incidents`; the grid uses a fixed rectangular demonstration extent instead of the viewport.
-- Navigation now has **Incidents**, **Map & spatial analysis**, and **Analytics**; there is no duplicate Hotspots page.
+- Navigation includes **Incidents**, **Map & spatial analysis**, **Analytics**, and **Operations**; there is no duplicate Hotspots page.
 - Text sizes and contrast were increased across the dashboard, map, forms, tables and analytics charts.
 - Every visualization and concentration rank describes synthetic records only — **not validated hotspots, crime risks, or predictions**. See [MODULE02.md](MODULE02.md) for implementation details.
 
@@ -107,6 +117,7 @@ For demonstration safety, the API **always** sets `source_type` to `synthetic`, 
 | GET | `/api/analytics/overview` | Complete filtered summary and category/status/date/hour/zone aggregates |
 | GET | `/api/analytics/filters` | Category/status choices and distinct synthetic demonstration zones |
 | GET | `/api/hotspots/grid` | Synthetic grid-cell counts, ranks, bounds, and GeoJSON features |
+| GET | `/api/operations/overview` | Static read-only fictional CCTV, accident and patrol track data |
 
 ## Folder structure
 
@@ -127,4 +138,4 @@ CrimeMap/
 
 This MVP intentionally has **no authentication** and supports only synthetic records. Before using any real police data, implement officer authentication, role-based permissions, audit logs, encryption, retention/access policies, and written authorization. Avoid storing victim/witness names or addresses in the demo. A future authorized import pipeline must explicitly identify provenance and prevent unverified records being presented as official.
 
-**Next:** Future modules can add appropriately validated predictive modeling and decision support, with documented limitations and synthetic demonstration data until authorized records are available. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
+**Next:** Future modules can add authenticated data workflows, GPS/asset integrations, validated alerting and appropriately validated predictive modeling and decision support, with documented limitations and synthetic demonstration data until authorized records are available. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
