@@ -61,7 +61,7 @@ def test_map_rejects_invalid_bounds_and_filters(client):
         assert result.status_code == 422, result.text
 
 
-def test_sample_dataset_renders_all_36_synthetic_map_points(client):
+def test_sample_dataset_renders_all_100_synthetic_map_points(client):
     from pathlib import Path
     sample = Path(__file__).resolve().parents[2] / 'data' / 'synthetic_incidents.csv'
     import csv
@@ -72,9 +72,9 @@ def test_sample_dataset_renders_all_36_synthetic_map_points(client):
     import json
     response = client.post('/api/incidents/import', files={'file': ('demo.json', json.dumps(cleaned), 'application/json')})
     assert response.status_code == 201, response.text
-    assert response.json()['imported'] == 36
+    assert response.json()['imported'] == 100
     visible = client.get('/api/map/incidents', params=PUDUCHERRY)
     assert visible.status_code == 200, visible.text
-    assert visible.json()['meta']['total'] == 36
-    assert len(visible.json()['features']) == 36
+    assert visible.json()['meta']['total'] == 100
+    assert len(visible.json()['features']) == 100
     assert all(f['properties']['source_type'] == 'synthetic' for f in visible.json()['features'])
