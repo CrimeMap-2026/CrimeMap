@@ -111,3 +111,55 @@
   .grid-actions { width: 100%; }
   .map-frame { min-height: 470px; }
 }
+
+
+/* Consolidated operational layers — one Leaflet map shared by every mode. */
+.ops-controls{padding:18px 20px;margin:0 0 15px}
+.ops-controls-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ops-controls-heading strong{font-size:16px;color:#f1f7ff}
+.ops-controls-heading span{font-size:13px;color:#e7c789}
+.ops-layer-toggles{display:flex;gap:9px;flex-wrap:wrap}
+.ops-layer-toggle{display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 12px;background:#192d44;border:1px solid #365578;border-radius:8px;color:#e1edfa;font-size:14px;cursor:pointer}
+.ops-layer-toggle input{width:17px;height:17px;accent-color:#80baff}
+.ops-layer-toggle i,.ops-map-legend i,.ops-unit-name i{width:11px;height:11px;border-radius:50%;flex-shrink:0;display:inline-block}
+.ops-timeline{margin-top:15px;padding:15px;background:#142438;border:1px solid #2c4460;border-radius:8px}
+.ops-timeline-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:14px;color:#e5f0fc}
+.ops-timeline-title span{margin-left:auto;color:#b5cde6}
+.ops-timeline input[type=range]{width:100%;accent-color:#7bb7fa;margin-top:16px}
+.ops-timeline-footnote{font-size:13px;color:#adbfda;line-height:1.6;margin-top:5px}
+.ops-feedback{font-size:14px;color:#bed5ed;line-height:1.6;margin-top:12px}
+.ops-error{color:#ffb9c0}
+.ops-error button{font:inherit;color:#fff;background:#793d4c;border:1px solid #aa606d;padding:4px 8px;border-radius:5px;margin-left:8px}
+.ops-counts{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+.ops-counts span{display:inline-flex;align-items:center;gap:7px;font-size:13px;background:#1a304a;color:#d4e7f9;border-radius:7px;padding:8px 10px}
+.ops-map-legend{display:flex;flex-wrap:wrap;gap:9px 13px}
+.ops-map-legend span{display:inline-flex;align-items:center;gap:7px}
+.ops-map-legend small{flex-basis:100%;font-size:12px;line-height:1.5}
+.ops-side-summary{font-size:13px;background:#1a3048;color:#c5dff7;padding:12px 17px;border-top:1px solid #2e425b}
+.ops-unit-list{min-height:75px}
+.ops-unit{width:100%;display:grid;gap:7px;text-align:left;color:#b9cde3;font-size:13px;background:#101b2b;border:0;border-top:1px solid #2c3f56;padding:15px 17px}
+.ops-unit:hover{background:#20364e}
+.ops-unit-name{display:flex;align-items:center;gap:8px;color:#e8f4ff}
+.ops-unit-name strong{font-size:14px}
+.ops-unit-name svg{margin-left:auto;color:#a4d0ff}
+.ops-nearest{margin-top:auto;background:#182c43;border-top:1px solid #344d69;padding:17px}
+.ops-nearest h3{font-size:15px;color:#f0f7ff}
+.ops-nearest p{font-size:13px;color:#c0d5eb;line-height:1.6;margin-top:10px}
+.ops-nearest .button{margin-top:12px}
+.ops-nearest small{display:block;font-size:12px;color:#e5c58d;line-height:1.6;margin-top:12px}
+.geo-references{padding:19px 20px;margin-top:16px}
+.geo-references summary{font-size:15px;color:#dcebf9;cursor:pointer;font-weight:700}
+.geo-references p{color:#b8cbe2;font-size:13px;line-height:1.6;margin:12px 0}
+.geo-reference-links{display:flex;flex-wrap:wrap;gap:8px 18px}
+.geo-reference-links a{font-size:14px;color:#add3ff}
+@media (max-width: 950px) {
+  .map-layer-switch{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .map-layer-switch button{justify-content:center;min-width:0}
+}
+@media (max-width: 550px) {
+  .map-layer-switch{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .map-layer-switch button{font-size:13px;padding:10px 8px}
+  .ops-layer-toggle{flex:1 1 46%}
+  .ops-timeline-title span{margin-left:0;width:100%}
+  .ops-controls{padding:15px}
+}
