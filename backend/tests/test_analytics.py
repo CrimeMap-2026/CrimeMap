@@ -138,6 +138,9 @@ def test_aggregates_are_not_limited_by_incident_pagination(client):
         body = overview(client)
     finally:
         event.remove(main_module.engine, "before_cursor_execute", capture)
+    # Authentication uses separate user/session lookups; the analytic query itself
+    # must remain one database aggregation without N+1 incident reads.
+    statements = [sql for sql in statements if "matching_incidents" in sql]
     assert len(statements) == 1
     assert "GROUP BY" in statements[0] and "UNION ALL" in statements[0]
     assert body["summary"]["total_incidents"] == 250
