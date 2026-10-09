@@ -272,7 +272,7 @@ function App() {
             <div className="auth-account-buttons"><button type="button" className="button subtle" disabled={passwordBusy} onClick={() => { setAccountOpen(false); setAccountError(''); setOldPassword(''); setNewPassword(''); }}>Cancel</button><button type="submit" className="button primary" disabled={passwordBusy}>Change password</button></div>
           </form>
         </section>
-      </div>
+      </div>}
     </div>
   );
 }
