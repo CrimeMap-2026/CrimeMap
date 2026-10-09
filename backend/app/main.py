@@ -15,6 +15,7 @@ from .db import Base, engine, get_db
 from .models import Incident
 from .analytics import router as analytics_router
 from .hotspots import router as hotspots_router
+from .operations import router as operations_router
 from .schemas import Category, ImportResult, IncidentCreate, IncidentPage, IncidentPatch, IncidentRead, Status
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
@@ -30,6 +31,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="CrimeMap API", version="0.1.0", lifespan=lifespan)
 app.include_router(analytics_router)
 app.include_router(hotspots_router)
+app.include_router(operations_router)
 
 
 def to_utc_string(item: IncidentCreate) -> str:
