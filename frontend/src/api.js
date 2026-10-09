@@ -27,6 +27,9 @@ async function request(path, options = {}) {
     throw new Error('Cannot reach the API. Start the FastAPI server on port 8000.');
   }
   if (!response.ok) {
+    if (response.status === 401 && !path.startsWith('/api/auth/')) {
+      window.dispatchEvent(new Event('crimemap-session-expired'));
+    }
     let body;
     try { body = await response.json(); } catch { body = {}; }
     throw new Error(messageFromError(body.detail) || `Request failed (${response.status})`);
@@ -100,4 +103,51 @@ export function fetchHotspots(filters, signal) {
 // Static, read-only fictional operations overlays; this is not a real-time feed.
 export function fetchOperations(signal) {
   return request('/api/operations/overview', { signal });
+}
+
+export function signIn(username, password) {
+  return request('/api/auth/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function whoAmI() {
+  return request('/api/auth/me');
+}
+
+export function signOut() {
+  return request('/api/auth/logout', { method: 'POST' });
+}
+
+export function changeOwnPassword(currentPassword, newPassword) {
+  return request('/api/auth/change-password', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
+export function listUsers(signal) {
+  return request('/api/admin/users', { signal });
+}
+
+export function addUser(username, password, role) {
+  return request('/api/admin/users', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, role }),
+  });
+}
+
+export function modifyUser(id, patch) {
+  return request(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export function resetUserPassword(id, password) {
+  return request(`/api/admin/users/${encodeURIComponent(id)}/password`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
 }
