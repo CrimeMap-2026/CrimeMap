@@ -96,3 +96,8 @@ export function fetchHotspots(filters, signal) {
   }
   return request(`/api/hotspots/grid?${query}`, { signal });
 }
+
+// Static, read-only fictional operations overlays; this is not a real-time feed.
+export function fetchOperations(signal) {
+  return request('/api/operations/overview', { signal });
+}
