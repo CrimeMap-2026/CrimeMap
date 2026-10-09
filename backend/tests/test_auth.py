@@ -132,3 +132,43 @@ def test_disabled_accounts_cannot_sign_in(client):
     assert client.post("/api/auth/login", json={
         "username": "disabled_user", "password": "long-demo-password-example",
     }).status_code == 401
+
+
+def test_local_vite_proxy_origins_can_log_in(client):
+    # Vite serves the browser at :5173, but forwards the API to :8000.
+    # The browser's Origin therefore differs from the forwarded Host.
+    for origin in ("http://localhost:5173", "http://127.0.0.1:5173"):
+        client.cookies.delete(COOKIE)
+        result = client.post("/api/auth/login",
+            headers={"Origin": origin, "Host": "127.0.0.1:8000"},
+            json={"username": "testadmin", "password": "unit-test-password-strong"})
+        assert result.status_code == 200, result.text
+        assert result.json()["role"] == "admin"
+
+
+def test_untrusted_origins_still_blocked_for_local_api(client):
+    for origin in ("https://unrelated.example", "http://localhost:5174",
+                   "http://localhost:5173.attacker.example", "null"):
+        result = client.post("/api/auth/logout", headers={
+            "Origin": origin, "Host": "127.0.0.1:8000"
+        })
+        assert result.status_code == 403, origin
+
+
+def test_same_origin_without_explicit_port_is_allowed(client):
+    result = client.post("/api/auth/logout", headers={
+        "Origin": "http://testserver", "Host": "testserver",
+    })
+    assert result.status_code == 200
+
+
+def test_trusted_origin_configuration_for_reverse_proxy(client, monkeypatch):
+    monkeypatch.setenv("CRIMEMAP_TRUSTED_ORIGINS", "https://dashboard.example.org")
+    response = client.post("/api/auth/login", headers={
+        "Origin": "https://dashboard.example.org", "Host": "internal-api:8000"
+    }, json={"username": "testadmin", "password": "unit-test-password-strong"})
+    assert response.status_code == 200, response.text
+    rejected = client.post("/api/auth/logout", headers={
+        "Origin": "https://dashboard.example.org.attacker.org", "Host": "internal-api:8000"
+    })
+    assert rejected.status_code == 403
