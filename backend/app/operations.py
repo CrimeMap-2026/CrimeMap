@@ -6,8 +6,10 @@ These immutable examples intentionally do not claim to be real Puducherry assets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from .auth import require_permission
 
-router = APIRouter(prefix="/api/operations", tags=["synthetic-operations"])
+router = APIRouter(prefix="/api/operations", tags=["synthetic-operations"], dependencies=[Depends(require_permission("read"))])
 
 IST = timezone(timedelta(hours=5, minutes=30))
 BASE_TIME = datetime(2026, 9, 18, 10, 0, tzinfo=IST)
