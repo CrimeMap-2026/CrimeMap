@@ -6,7 +6,8 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, Request
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -16,7 +17,7 @@ from .models import Incident
 from .analytics import router as analytics_router
 from .hotspots import router as hotspots_router
 from .operations import router as operations_router
-from .auth import router as auth_router, require_permission
+from .auth import router as auth_router, require_permission, check_request_origin
 from .schemas import Category, ImportResult, IncidentCreate, IncidentPage, IncidentPatch, IncidentRead, Status
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
@@ -34,6 +35,21 @@ app.include_router(analytics_router)
 app.include_router(hotspots_router)
 app.include_router(operations_router)
 app.include_router(auth_router)
+
+
+@app.middleware("http")
+async def protect_api_requests(request: Request, call_next):
+    # Reject browser writes from different origins; complements SameSite=Strict cookies.
+    if request.url.path.startswith("/api/") and request.method in {"POST", "PATCH", "PUT", "DELETE"}:
+        try:
+            check_request_origin(request)
+        except HTTPException:
+            return JSONResponse(status_code=403, content={"detail": "Cross-origin changes are not allowed"},
+                                headers={"Cache-Control": "no-store"})
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def to_utc_string(item: IncidentCreate) -> str:
