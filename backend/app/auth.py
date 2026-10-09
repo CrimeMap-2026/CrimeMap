@@ -196,14 +196,14 @@ def check_request_origin(request: Request) -> None:
             and bool(parsed.hostname)
             and parsed.username is None and parsed.password is None
             and parsed.path == "" and parsed.query == "" and parsed.fragment == ""
-            and parsed.port is not None or False
+            and (parsed.port is None or parsed.port > 0)
         )
     except ValueError:
         valid_origin = False
 
     # Direct same-origin requests work without any configuration. The protocol
     # is validated independently to keep the proxy/HTTPS cases explicit.
-    same_host = valid_origin and parsed.netloc.lower() == host
+    same_host = valid_origin and parsed.netloc.lower() == host and parsed.scheme == request.url.scheme
 
     # Loopback-only defaults for the *local* Vite server. Never accept these
     # defaults when the API's Host is a public deployment hostname.
