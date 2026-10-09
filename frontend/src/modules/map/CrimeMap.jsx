@@ -83,7 +83,7 @@ function buildPopup(feature) {
   return root;
 }
 
-export default function CrimeMap({ refresh = 0 }) {
+export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const markerRefs = useRef(new Map());
@@ -416,7 +416,7 @@ export default function CrimeMap({ refresh = 0 }) {
         <div className="map-layer-switch" role="group" aria-label="Map display mode">
           <button type="button" className={layer === 'markers' ? 'active' : ''} aria-pressed={layer === 'markers'} onClick={() => setLayer('markers')}><MapPinned size={16} /> Markers</button>
           <button type="button" className={layer === 'heatmap' ? 'active' : ''} aria-pressed={layer === 'heatmap'} onClick={() => setLayer('heatmap')}><Layers size={17} /> Heatmap</button>
-          <button type="button" className={layer === 'grid' ? 'active' : ''} aria-pressed={layer === 'grid'} onClick={() => setLayer('grid')}><Grid2X2 size={17} /> Grid analysis</button>
+          {canAnalyze && <button type="button" className={layer === 'grid' ? 'active' : ''} aria-pressed={layer === 'grid'} onClick={() => setLayer('grid')}><Grid2X2 size={17} /> Grid analysis</button>}
           <button type="button" className={layer === 'operations' ? 'active' : ''} aria-pressed={layer === 'operations'} onClick={() => setLayer('operations')}><RadioTower size={17} /> Operations</button>
         </div>
       </div>
