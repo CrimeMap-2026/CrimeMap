@@ -14,10 +14,11 @@ from sqlalchemy.orm import Session
 
 from .analytics import DATA_LABEL, utc_boundary, zone_expression
 from .db import get_db
+from .auth import require_permission
 from .models import Incident
 from .schemas import Category, Status
 
-router = APIRouter(prefix="/api/hotspots", tags=["hotspots"])
+router = APIRouter(prefix="/api/hotspots", tags=["hotspots"], dependencies=[Depends(require_permission("analyze"))])
 
 REFERENCE_LATITUDE = 11.935
 REFERENCE_LONGITUDE = 79.83
