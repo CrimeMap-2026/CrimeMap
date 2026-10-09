@@ -1,0 +1,44 @@
+/* Sign-in and account-administration styles. */
+.auth-screen{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at top,#182f4a,#080f1b 66%)}
+.auth-card{width:min(100%,460px);padding:32px;border:1px solid #334963;background:#101c2c;border-radius:16px;box-shadow:0 24px 90px #0005}
+.auth-brand{display:flex;align-items:center;gap:10px;color:#e8f4ff;font:800 25px Manrope,system-ui,sans-serif;margin-bottom:28px}
+.auth-brand svg,.auth-brand span{color:#79b7fa}
+.auth-card h1{font-size:27px;margin-bottom:10px}
+.auth-card>p{font-size:14px;color:#bfd1e7;line-height:1.65;margin-bottom:24px}
+.auth-fields{padding:0;display:grid;gap:16px}
+.auth-fields label{display:grid;gap:8px;color:#c9d9eb;font-size:14px;font-weight:600}
+.auth-fields input,.auth-fields select{width:100%;min-height:44px;background:#152539;color:#eaf4ff;border:1px solid #3c5673;border-radius:8px;padding:10px 12px;font:inherit}
+.auth-fields input:focus-visible,.auth-fields select:focus-visible{outline:2px solid #83baff;outline-offset:2px}
+.auth-fields .button{margin-top:6px}
+.auth-error{padding:12px 13px;border-radius:8px;background:#462637;border:1px solid #874d67;color:#ffdce6;font-size:13px}
+.auth-footnote{display:flex;align-items:flex-start;gap:10px;color:#aabdd3;font-size:12px;line-height:1.6;border-top:1px solid #2c405b;padding-top:18px;margin-top:23px}
+.auth-footnote svg{flex-shrink:0;margin-top:2px}
+.auth-footnote code{color:#cce5ff;overflow-wrap:anywhere}
+.auth-loading{min-height:100vh;display:grid;place-items:center;color:#d0e3fa;font-size:16px;background:#080f1b}
+.auth-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.auth-role-chip{border-radius:8px;background:#233954;border:1px solid #385577;color:#cce2fa;padding:8px 10px;font-size:13px;text-transform:capitalize;font-weight:700}
+.auth-actions .button{min-height:36px;padding:7px 10px;font-size:13px}
+.user-admin-layout{display:grid;grid-template-columns:minmax(260px,350px) minmax(0,1fr);align-items:start;gap:20px}
+.users-create{padding-bottom:20px}
+.users-create>.auth-fields{padding:0 22px}
+.user-role-description{font-size:13px;color:#a9c2dd;line-height:1.6}
+.user-list{display:grid}
+.user-entry{padding:17px 20px;border-top:1px solid #2b3e57}
+.user-entry-main{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+.user-entry-main strong{font-size:15px;color:#e4f1ff}
+.user-active,.user-inactive{background:#254d42;color:#b7e9d2;padding:5px 8px;border-radius:6px;font-size:12px}
+.user-inactive{background:#48323a;color:#ffc9d6}
+.user-actions{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+.user-actions label{font-size:13px;color:#aec9e6;display:grid;gap:6px}
+.user-actions select{background:#15283f;border:1px solid #385578;color:#e9f4ff;border-radius:8px;height:41px;padding:0 12px;font-size:14px}
+.user-actions .button{white-space:normal}
+.user-entry :disabled{opacity:.55}
+.auth-account-backdrop{position:fixed;inset:0;background:#030916bd;z-index:90;display:grid;place-items:center;padding:20px}
+.auth-account-panel{width:min(100%,430px);background:#142338;border:1px solid #375577;border-radius:12px;padding:23px}
+.auth-account-panel h2{font-size:20px;margin-bottom:16px}
+.auth-account-panel .auth-fields{margin-top:15px}
+.auth-account-panel p{font-size:13px;color:#a8c0dd;margin:10px 0}
+.auth-account-panel .auth-account-buttons{display:flex;justify-content:flex-end;gap:10px;margin-top:13px}
+@media(max-width:1080px){.auth-actions .auth-role-chip{font-size:12px}}
+@media(max-width:850px){.user-admin-layout{grid-template-columns:1fr}.topbar{flex-wrap:wrap;height:auto;min-height:70px;padding-top:9px;padding-bottom:9px}.auth-actions{margin-left:auto}}
+@media(max-width:520px){.auth-card{padding:22px}.auth-actions{width:100%;justify-content:flex-start}.user-actions{flex-direction:column;align-items:stretch}.user-actions label{width:100%}.user-entry{padding:15px}.auth-account-panel{padding:18px}}
