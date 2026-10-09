@@ -5,8 +5,9 @@ import 'leaflet.heat';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-import { Crosshair, Download, Grid2X2, Layers, MapPinned, RotateCcw, ShieldAlert, SlidersHorizontal } from 'lucide-react';
-import { CATEGORIES, STATUSES, fetchAnalyticsFilters, fetchHotspots, fetchMapIncidents } from '../../api';
+import { Crosshair, Download, Grid2X2, Layers, MapPinned, RotateCcw, ShieldAlert, SlidersHorizontal, RadioTower } from 'lucide-react';
+import { CATEGORIES, STATUSES, fetchAnalyticsFilters, fetchHotspots, fetchMapIncidents, fetchOperations } from '../../api';
+import { DEFAULT_OPERATION_LAYERS, drawOperationalLayers, OperationsControls, OperationsResults } from './OperationalMode.jsx';
 import './map.css';
 
 const DEFAULT_GRID = { start_date: '', end_date: '', zone: '', cell_size_m: '1000', min_count: '3' };
@@ -89,6 +90,7 @@ export default function CrimeMap({ refresh = 0 }) {
   const clusterRef = useRef(null);
   const cellLayers = useRef(new Map());
   const gridLayerRef = useRef(null);
+  const patrolMarkersRef = useRef(new Map());
   const [bounds, setBounds] = useState(null);
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
@@ -106,6 +108,13 @@ export default function CrimeMap({ refresh = 0 }) {
   const [gridRetry, setGridRetry] = useState(0);
   const [selectedCell, setSelectedCell] = useState(null);
   const gridPending = JSON.stringify(gridDraft) !== JSON.stringify(gridApplied);
+  const [operations, setOperations] = useState(null);
+  const [opsLoading, setOpsLoading] = useState(false);
+  const [opsError, setOpsError] = useState('');
+  const [opsRetry, setOpsRetry] = useState(0);
+  const [opsLayers, setOpsLayers] = useState(DEFAULT_OPERATION_LAYERS);
+  const [opsStep, setOpsStep] = useState(0);
+  const [selectedOperationIncident, setSelectedOperationIncident] = useState(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -135,7 +144,7 @@ export default function CrimeMap({ refresh = 0 }) {
   }, []);
 
   useEffect(() => {
-    if (!bounds || layer === 'grid') return;
+    if (!bounds || layer === 'grid' || (layer === 'operations' && !opsLayers.incidents)) return;
     const controller = new AbortController();
     setLoading(true);
     setError('');
@@ -152,7 +161,7 @@ export default function CrimeMap({ refresh = 0 }) {
         setLoading(false);
       });
     return () => controller.abort();
-  }, [bounds, category, status, refresh, layer]);
+  }, [bounds, category, status, refresh, layer, opsLayers.incidents]);
 
   useEffect(() => {
     if (layer !== 'grid' || gridOptions) return;
@@ -190,12 +199,44 @@ export default function CrimeMap({ refresh = 0 }) {
   }, [layer, gridApplied, category, status, refresh, gridRetry]);
 
   useEffect(() => {
+    if (layer !== 'operations' || operations) return;
+    const controller = new AbortController();
+    setOpsLoading(true);
+    setOpsError('');
+    fetchOperations(controller.signal)
+      .then(data => {
+        if (controller.signal.aborted) return;
+        setOperations(data);
+        setOpsStep(Math.max(0, data.timeline.steps - 1));
+        setOpsLoading(false);
+      })
+      .catch(reason => {
+        if (controller.signal.aborted) return;
+        setOpsError(reason.message || 'Could not load simulated operations data.');
+        setOpsLoading(false);
+      });
+    return () => controller.abort();
+  }, [layer, operations, opsRetry]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     markerRefs.current.clear();
     clusterRef.current = null;
     cellLayers.current.clear();
     gridLayerRef.current = null;
+    patrolMarkersRef.current.clear();
+    if (layer === 'operations') {
+      const rendered = drawOperationalLayers(map, {
+        data: operations, collection, enabled: opsLayers, step: opsStep,
+        onSelectIncident: setSelectedOperationIncident,
+      });
+      patrolMarkersRef.current = rendered.patrolMarkers;
+      return () => {
+        map.removeLayer(rendered.group);
+        patrolMarkersRef.current.clear();
+      };
+    }
     if (layer === 'grid') {
       if (!gridData) return;
       const { south, west, north, east } = gridData.meta.study_bounds;
@@ -261,7 +302,7 @@ export default function CrimeMap({ refresh = 0 }) {
       markerRefs.current.clear();
       clusterRef.current = null;
     };
-  }, [collection, layer, gridData]);
+  }, [collection, layer, gridData, operations, opsLayers, opsStep]);
 
   useEffect(() => {
     if (layer !== 'grid' || !gridData) return;
@@ -288,6 +329,16 @@ export default function CrimeMap({ refresh = 0 }) {
 
   const latest = useMemo(() => collection.features.slice(0, 8), [collection]);
 
+  function locateDemoUnit(_unit, position) {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!opsLayers.patrols) setOpsLayers(previous => ({ ...previous, patrols: true }));
+    map.setView([position.latitude, position.longitude], Math.max(14, map.getZoom()));
+    // When the patrol layer is already mounted, open its matching popup.
+    if (opsLayers.patrols) patrolMarkersRef.current.get(_unit.id)?.openPopup();
+  }
+
+
   function showIncident(feature) {
     const map = mapRef.current;
     if (!map) return;
@@ -312,6 +363,9 @@ export default function CrimeMap({ refresh = 0 }) {
     setGridApplied({ ...DEFAULT_GRID });
     setGridValidation('');
     setSelectedCell(null);
+    setOpsLayers({ ...DEFAULT_OPERATION_LAYERS });
+    if (operations) setOpsStep(Math.max(0, operations.timeline.steps - 1));
+    setSelectedOperationIncident(null);
     mapRef.current?.setView(CENTER, 13);
   }
 
@@ -355,17 +409,18 @@ export default function CrimeMap({ refresh = 0 }) {
     <div className="crime-map-page">
       <div className="heading-row">
         <div>
-          <div className="eyebrow">MODULE 02 · MAP & SPATIAL ANALYSIS</div>
-          <h1>Crime map & spatial analysis</h1>
-          <p className="intro">Explore incident locations, visual density, and grid-based concentrations in one map.</p>
+          <div className="eyebrow">MODULE 02 · GEOSPATIAL INTELLIGENCE</div>
+          <h1>Geospatial intelligence</h1>
+          <p className="intro">Explore incidents, heatmaps, grid concentrations, and fictional operational assets on one map.</p>
         </div>
         <div className="map-layer-switch" role="group" aria-label="Map display mode">
           <button type="button" className={layer === 'markers' ? 'active' : ''} aria-pressed={layer === 'markers'} onClick={() => setLayer('markers')}><MapPinned size={16} /> Markers</button>
           <button type="button" className={layer === 'heatmap' ? 'active' : ''} aria-pressed={layer === 'heatmap'} onClick={() => setLayer('heatmap')}><Layers size={17} /> Heatmap</button>
           <button type="button" className={layer === 'grid' ? 'active' : ''} aria-pressed={layer === 'grid'} onClick={() => setLayer('grid')}><Grid2X2 size={17} /> Grid analysis</button>
+          <button type="button" className={layer === 'operations' ? 'active' : ''} aria-pressed={layer === 'operations'} onClick={() => setLayer('operations')}><RadioTower size={17} /> Operations</button>
         </div>
       </div>
-      <div className="demo-warning"><ShieldAlert size={19} /><div><strong>Demonstration map — synthetic incidents only</strong><span>All locations and reports shown here are fictional. The heatmap and grid display descriptive concentrations, not verified hotspots or crime predictions.</span></div></div>
+      <div className="demo-warning"><ShieldAlert size={19} /><div><strong>Demonstration map — synthetic incidents only</strong><span>All locations and reports shown here are fictional. Heatmaps and grids describe fictional concentrations. Operational overlays use simulated assets and history, not actual GPS or CCTV feeds.</span></div></div>
       <section className="map-toolbar" aria-label="Crime map filters">
         <span className="map-filter-label"><SlidersHorizontal size={16} /> Filters</span>
         <select aria-label="Crime category" value={category} onChange={e => setCategory(e.target.value)}>
@@ -399,21 +454,33 @@ export default function CrimeMap({ refresh = 0 }) {
         {gridPending && <p className="grid-pending" role="status">You have unapplied grid filter changes.</p>}
         {gridValidation && <p className="grid-error" role="alert">{gridValidation}</p>}
       </form>}
+      {layer === 'operations' && <OperationsControls
+        data={operations} loading={opsLoading} error={opsError}
+        retry={() => setOpsRetry(value => value + 1)}
+        layers={opsLayers} onLayers={setOpsLayers} step={opsStep} onStep={setOpsStep}
+      />}
       <section className="map-layout" aria-label="Geospatial incident display">
         <div className="map-frame">
           <div className="map-canvas" ref={mapContainer} aria-label="Interactive map centered on Puducherry" />
           <div className="map-overlay-count" role="status">
             {layer === 'grid'
               ? gridLoading ? 'Computing grid counts…' : gridError ? 'Grid analysis unavailable' : gridData ? count(gridData.meta.qualifying_cells) + ' cells meet the threshold' : 'Choose grid filters'
+              : layer === 'operations' ? opsLoading ? 'Loading simulated assets…' : opsError ? 'Demo operations unavailable' : 'SIMULATED ASSETS · NOT LIVE'
               : loading ? 'Loading visible reports…' : error ? 'Map data unavailable' : `${collection.meta.returned} of ${collection.meta.total} incidents in view`}
           </div>
           <div className="map-legend" aria-label="Map legend">
-            <strong>{layer === 'grid' ? 'Synthetic incidents per cell' : layer === 'heatmap' ? 'Synthetic point density' : 'Incident categories'}</strong>
-            {layer === 'grid' ? <div className="grid-legend"><span><i style={{ background: colorForCount(1) }} /> 1–4</span><span><i style={{ background: colorForCount(5) }} /> 5–9</span><span><i style={{ background: colorForCount(10) }} /> 10+</span><small>Only cells meeting the count threshold are displayed. No risk estimate.</small></div> : layer === 'heatmap' ? <span>Brighter areas contain more demonstration points. No risk estimate.</span> :
+            <strong>{layer === 'grid' ? 'Synthetic incidents per cell' : layer === 'operations' ? 'Fictional operational layers' : layer === 'heatmap' ? 'Synthetic point density' : 'Incident categories'}</strong>
+            {layer === 'operations' ? <div className="ops-map-legend">
+              <span><i style={{ background: '#e39b80' }} /> Crime incidents</span>
+              <span><i style={{ background: '#5bc7ce' }} /> CCTV assets</span>
+              <span><i style={{ background: '#edb760' }} /> Road accidents</span>
+              <span><i style={{ background: '#70b8ff' }} /> Demo patrols</span>
+              <small>Illustrative locations only. Not a live monitoring map.</small>
+            </div> : layer === 'grid' ? <div className="grid-legend"><span><i style={{ background: colorForCount(1) }} /> 1–4</span><span><i style={{ background: colorForCount(5) }} /> 5–9</span><span><i style={{ background: colorForCount(10) }} /> 10+</span><small>Only cells meeting the count threshold are displayed. No risk estimate.</small></div> : layer === 'heatmap' ? <span>Brighter areas contain more demonstration points. No risk estimate.</span> :
               <div className="legend-grid">{CATEGORIES.map(value => <span key={value}><i className={`legend-dot cat-${CATEGORY_KEYS[value]}`} />{value}</span>)}</div>}
           </div>
         </div>
-        <aside className="map-results" aria-label={layer === 'grid' ? 'Ranked grid cells' : 'Incidents in current map view'}>
+        <aside className="map-results" aria-label={layer === 'grid' ? 'Ranked grid cells' : layer === 'operations' ? 'Simulated operational assets' : 'Incidents in current map view'}>
           {layer === 'grid' ? <>
             <div className="map-results-heading"><h2>Grid concentration</h2><span>{gridData?.meta.qualifying_cells ?? '—'}</span></div>
             <p>Ranked grid cells describe synthetic incident counts, not crime risk.</p>
@@ -440,7 +507,12 @@ export default function CrimeMap({ refresh = 0 }) {
                 </button>)}
               </div>
             </>}
-          </> : <>
+          </> : layer === 'operations' ? <OperationsResults
+            data={operations} loading={opsLoading} error={opsError}
+            layers={opsLayers} step={opsStep} collection={collection}
+            selectedIncident={selectedOperationIncident} onLocate={locateDemoUnit}
+            onClear={() => setSelectedOperationIncident(null)}
+          /> : <>
             <div className="map-results-heading"><h2>Visible incidents</h2><span>{collection.meta.total}</span></div>
             <p>Move or zoom the map to update this list. Latest records appear first.</p>
             {error && <div className="map-data-error" role="alert">{error}</div>}
@@ -463,6 +535,16 @@ export default function CrimeMap({ refresh = 0 }) {
         <p>Cell width, alignment, time period and filters affect the counts. Density uses nominal cell area without adjusting for population, exposure or reporting rates. These are not statistically validated hotspots or predictions.</p>
         <p>The rectangular extent is not an official administrative boundary. No highlighted cell does not mean an area is safe.</p>
       </details>}
+      <details className="panel geo-references">
+        <summary>Official Puducherry Police resources</summary>
+        <p>These are external government pages, not integrated data feeds. CrimeMap uses fictional demonstration records.</p>
+        <div className="geo-reference-links">
+          <a href="https://police.py.gov.in/finalvam.html" target="_blank" rel="noopener noreferrer">Official police website</a>
+          <a href="https://police.py.gov.in/PS%20Profiles%202023/Police%20Stations%20Main%20Page.htm" target="_blank" rel="noopener noreferrer">Police station directory</a>
+          <a href="https://police.py.gov.in/Crime%20Statistics/Crime%20Stat%202023/Puducherry%20Crime%20Statistic%20Main%20page.html" target="_blank" rel="noopener noreferrer">Published regional crime statistics</a>
+          <a href="https://cctnscitizen.py.gov.in/citizen/login.aspx" target="_blank" rel="noopener noreferrer">CCTNS citizen services</a>
+        </div>
+      </details>
       <div className="map-footnote">Basemap © OpenStreetMap contributors.
 Internet access is required for map tiles.
 Synthetic incident data is for demonstration only.</div>
