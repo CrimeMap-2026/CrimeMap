@@ -5,6 +5,7 @@ Run behind HTTPS before any non-local exposure. Do not use for real police recor
 """
 import hashlib
 import hmac
+import os
 import re
 import secrets
 import time
@@ -174,17 +175,52 @@ def require_permission(permission: str):
 
 
 def check_request_origin(request: Request) -> None:
-    """Additional cross-site write defense for cookie authentication.
+    """Reject untrusted browser writes while supporting the local Vite API proxy.
 
-    SameSite=Strict is the primary browser protection; reject mismatched Origin
-    headers if present, while retaining script/CLI compatibility without Origin.
+    Browsers send Origin for the frontend (localhost:5173), but the backend may
+    see the forwarded Host (127.0.0.1:8000). Those are not the same host/port
+    even though the browser has made a same-origin call to Vite.
     """
     from urllib.parse import urlsplit
+
     origin = request.headers.get("origin")
-    if origin:
-        parsed = urlsplit(origin)
-        if parsed.scheme not in ("http", "https") or parsed.netloc.lower() != request.headers.get("host", "").lower():
-            raise HTTPException(403, "Cross-origin changes are not allowed")
+    if not origin:
+        # Non-browser clients without Origin are still subject to authentication.
+        return
+
+    parsed = urlsplit(origin)
+    host = request.headers.get("host", "").lower()
+    try:
+        valid_origin = (
+            parsed.scheme in ("http", "https")
+            and bool(parsed.hostname)
+            and parsed.username is None and parsed.password is None
+            and parsed.path == "" and parsed.query == "" and parsed.fragment == ""
+            and parsed.port is not None or False
+        )
+    except ValueError:
+        valid_origin = False
+
+    # Direct same-origin requests work without any configuration. The protocol
+    # is validated independently to keep the proxy/HTTPS cases explicit.
+    same_host = valid_origin and parsed.netloc.lower() == host
+
+    # Loopback-only defaults for the *local* Vite server. Never accept these
+    # defaults when the API's Host is a public deployment hostname.
+    loopback_host = host.split(":", 1)[0] in ("127.0.0.1", "localhost", "[::1]")
+    local_vite = loopback_host and origin.lower() in (
+        "http://localhost:5173", "http://127.0.0.1:5173",
+    )
+
+    # In a production reverse-proxy deployment, explicitly configure trusted
+    # browser origins (HTTPS recommended). No wildcards or suffix matching.
+    configured = {
+        value.strip().lower()
+        for value in os.getenv("CRIMEMAP_TRUSTED_ORIGINS", "").split(",")
+        if value.strip()
+    }
+    if not valid_origin or not (same_host or local_vite or origin.lower() in configured):
+        raise HTTPException(403, "Cross-origin changes are not allowed")
 
 
 @router.post("/auth/login")
