@@ -41,7 +41,7 @@ The map also offers links to official Puducherry Police directory/statistics and
 - CSV/JSON import with strict record validation. A rejected row aborts the entire import.
 - SQLAlchemy storage with SQLite by default and PostgreSQL support via `DATABASE_URL`.
 - React/Vite incident-management screen with filters, pagination, add form, import, and status updates.
-- Synthetic sample CSV with 36 records, plus an idempotent demo seed script.
+- A 100-record synthetic dataset (original 36 plus 64 new fictional samples), with an idempotent seed script.
 - API tests for CRUD, UTC conversion, field validation, atomic imports, filters, and pagination.
 
 ## Start the backend
@@ -60,17 +60,24 @@ uvicorn app.main:app --reload --port 8000
 
 The API is at `http://127.0.0.1:8000` and the Swagger documentation is at `http://127.0.0.1:8000/docs`.
 
-`crimemap.db` is created in the `backend/` directory automatically on first startup. Keep your existing database when upgrading modules. For a **new development database only**, you can optionally run `python -m scripts.seed_demo`; it won't duplicate the bundled 36 demo IDs.
+SQLite is **already a database**: `crimemap.db` is created in `backend/` on startup, alongside account and session tables. Existing incident records and administrator accounts are preserved when pulling new code.
 
-### Optional PostgreSQL
-
-Set `DATABASE_URL` before starting the backend (PostGIS is optional until a later geospatial module):
+To fill any missing demonstration records (including the 64 new records), stop at least any simultaneous seed process and run from `backend/`:
 
 ```bash
-export DATABASE_URL='postgresql+psycopg://username:password@localhost:5432/crimemap'
+python -m scripts.seed_demo
+python -m scripts.db_status
 ```
 
-The database must exist; the app creates its `incidents` table automatically for this prototype. Use versioned migrations before production deployment.
+The seed command adds only **missing** stable fixture IDs (`DEMO-0001` through `DEMO-0100`). It does not wipe the database, overwrite edited fixture records or change accounts. On a database containing the original 36 unmodified fixture IDs, it adds 64 for a total of **100**. If you also have extra manually added/imported incidents, your database total may be **more than 100**. Seeding is explicit rather than automatic on startup.
+
+The downloadable sample CSV contains 100 records but its normal **Import** operation creates new IDs each time; for updating existing seeded databases, prefer the idempotent command above rather than re-importing the CSV.
+
+### Optional PostgreSQL development database
+
+SQLite remains the default. CrimeMap already supports PostgreSQL through SQLAlchemy's `DATABASE_URL`. An optional `compose.yaml` now starts **PostgreSQL 17** on your local computer, using a password that you choose in an untracked `.env` file, a persistent Docker volume, a readiness check, and a loopback-only port binding.
+
+**PostgreSQL is a separate database, not an automatic conversion of your SQLite records or accounts.** To switch, set `DATABASE_URL` before running the admin bootstrap, seed script and API; if you don't set it, nothing changes. Do not delete `backend/crimemap.db` when trying PostgreSQL. Detailed Fish/Linux steps, verification and troubleshooting are in [DATABASE.md](DATABASE.md). PostGIS and formal versioned schema migrations remain future work.
 
 ## Start the frontend
 
@@ -133,12 +140,14 @@ CrimeMap/
 ├── frontend/
 │   ├── public/          # Example downloadable CSV
 │   └── src/             # React UI
-├── data/                # Synthetic demonstration records
+├── data/                # 100 synthetic demonstration records
+├── compose.yaml          # Optional local PostgreSQL service
+├── .env.example          # Non-secret DB settings template
 └── README.md
 ```
 
 ## Security and future modules
 
-This MVP intentionally has **no authentication** and supports only synthetic records. Before using any real police data, implement officer authentication, role-based permissions, audit logs, encryption, retention/access policies, and written authorization. Avoid storing victim/witness names or addresses in the demo. A future authorized import pipeline must explicitly identify provenance and prevent unverified records being presented as official.
+This prototype has cookie-based authentication and four backend-enforced authorization levels, but **is not production-ready** and supports only fictional records. Before any real police data: implement an independently reviewed security design, MFA/centralized identities, comprehensive audit logs, encrypted transport and backups, retention/access policies, and written authorization. Avoid collecting victim/witness names or addresses in the demonstration. See [AUTHORIZATION.md](AUTHORIZATION.md).
 
-**Next:** Authorized accounts, field data workflows, verified infrastructure data, and validated spatial/decision-support methods may be developed as distinct future modules. No live police system is connected. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
+**Next:** A consistent date filter on map modes, explainable period-to-period spatial comparison, data-quality checks, access audit trails, and verified infrastructure data can be developed as distinct future features. No live police system is connected. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
