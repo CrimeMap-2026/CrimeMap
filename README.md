@@ -4,6 +4,14 @@ A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intell
 
 > **Data warning:** Every bundled incident is **synthetic**. The coordinates, incident types, zones, and timestamps were invented to test application behavior. They do **not** describe real Puducherry crimes. Do not use this build for operational policing or public crime claims.
 
+## Authorization and access levels
+
+CrimeMap now requires an account to use its API and UI. There are four backend-enforced roles: **Viewer** (read-only incidents and basic maps), **Analyst** (plus statistics/grid analysis), **Officer** (plus create/import/status updates), and **Administrator** (plus deletion and user management). Authentication uses revocable HttpOnly cookie sessions; the frontend shows only permitted controls, while the FastAPI routes enforce access on every request.
+
+**First run:** in `backend/`, after activating the Python environment, execute `python -m app.bootstrap_admin` and choose your own password. No default admin accounts or credentials are included. Then launch FastAPI and Vite and sign in. Administrators can create other users through **User management**.
+
+**Development-only security:** Do not expose the project to the internet or import real law-enforcement records. See [AUTHORIZATION.md](AUTHORIZATION.md) for the permissions matrix, setup instructions, technical details, and requirements before any operational deployment.
+
 ## Module 03 — Crime Analytics Dashboard
 
 - Open **Analytics** in the existing sidebar on desktop, tablet, or mobile.
