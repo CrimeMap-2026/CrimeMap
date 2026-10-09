@@ -89,5 +89,5 @@ def test_shipped_sample_csv_imports(client):
     with sample.open("rb") as source:
         response = client.post("/api/incidents/import", files={"file": (sample.name, source, "text/csv")})
     assert response.status_code == 201, response.text
-    assert response.json() == {"imported": 36, "source_type": "synthetic"}
-    assert client.get("/api/incidents").json()["total"] == 36
+    assert response.json() == {"imported": 100, "source_type": "synthetic"}
+    assert client.get("/api/incidents").json()["total"] == 100
