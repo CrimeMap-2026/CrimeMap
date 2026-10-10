@@ -75,7 +75,7 @@ jobs:
           with SessionLocal() as db:
               user = create_user(db, "testadmin", "postgres-ci-only-password", "admin")
               assert user.role == "admin"
-          assert {"incidents", "users", "login_sessions"} <= set(inspect(engine).get_table_names())
+          assert {"incidents", "users", "login_sessions", "prevention_plans", "audit_events"} <= set(inspect(engine).get_table_names())
           print("PostgreSQL schema and demo account: OK")
           PY
       - name: Seed exactly 100 fictional incidents
