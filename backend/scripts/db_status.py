@@ -11,6 +11,7 @@ from app.db import engine
 from app.models import Incident
 from app.auth_models import User, LoginSession
 from app.prevention_models import PreventionPlan
+from app.audit_models import AuditEvent
 
 
 def main() -> int:
@@ -19,7 +20,7 @@ def main() -> int:
     try:
         with engine.connect() as connection:
             tables = set(inspect(connection).get_table_names())
-            for name, model in (("incidents", Incident), ("users", User), ("login_sessions", LoginSession), ("prevention_plans", PreventionPlan)):
+            for name, model in (("incidents", Incident), ("users", User), ("login_sessions", LoginSession), ("prevention_plans", PreventionPlan), ("audit_events", AuditEvent)):
                 if name in tables:
                     total = connection.execute(select(func.count()).select_from(model)).scalar_one()
                     print(f"  {name}: {total:,} rows")
