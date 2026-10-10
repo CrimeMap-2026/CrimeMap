@@ -176,6 +176,8 @@ function App() {
     }
     setMapFocus(target);
     setView('map');
+    // Users often click a registry row after scrolling; show the map immediately.
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   async function handleStatus(id, nextStatus) {
