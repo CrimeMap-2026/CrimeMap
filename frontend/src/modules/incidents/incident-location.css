@@ -29,3 +29,6 @@
   .incident-picker-controls .button{flex:1 1 40%;white-space:normal}
   .incident-picker-location button{margin-left:0}
 }
+
+.incident-form-error{margin:0 24px 4px;padding:12px 14px;background:#452835;border:1px solid #96596a;border-radius:8px;color:#ffdce3;line-height:1.6;font-size:14px}
+@media(max-width:520px){.incident-form-error{margin:0 16px 4px}}
