@@ -111,6 +111,10 @@ CrimeMap/
 └── start.py             Start FastAPI + Vite together
 ```
 
+## Google Cloud Run deployment
+
+The repository includes a production multistage `Dockerfile` for **one HTTPS frontend/API URL** and an explicit Cloud SQL PostgreSQL mode (no ephemeral SQLite fallback). Accounts and fictional seed data are initialized **once** by a restricted Cloud Run Job, not by web-server startup. To deploy, see **[Cloud Run + Cloud SQL in Developer setup](docs/SETUP.md#google-cloud-run--cloud-sql-deployment-synthetic-demo-only)**. Provisioning Google Cloud services is manual and may consume trial credits; nothing is deployed or billed by cloning this repository.
+
 ## Testing and demo
 
 Run `cd backend && .venv/bin/python -m pytest -q` for backend tests; from `frontend/` run `npm test` and `npm run build`. CI also checks PostgreSQL schema/seed behavior. API route details are available in FastAPI's interactive [local API docs](http://127.0.0.1:8000/docs) when the server is running.
