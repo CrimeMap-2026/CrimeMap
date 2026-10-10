@@ -8,6 +8,7 @@ import {
   fetchPreventionInsights, fetchPreventionPlans, updatePreventionPlan,
 } from '../../api';
 import PreventionCountReview from './PreventionCountReview.jsx';
+import { useDialogFocus } from '../../hooks/useDialogFocus.js';
 import './prevention.css';
 
 const INITIAL_FILTERS = { zone: '', category: '', start_date: '', end_date: '' };
@@ -112,6 +113,8 @@ export default function Prevention({ canWrite = false, refresh = 0 }) {
     return () => cancelAnimationFrame(frame);
   }, [reviewPlan]);
   const [updating, setUpdating] = useState('');
+  const createDialogRef = useDialogFocus(Boolean(createDraft), () => setCreateDraft(null), working);
+  const editDialogRef = useDialogFocus(Boolean(editDraft), () => setEditDraft(null), Boolean(updating));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -317,7 +320,7 @@ export default function Prevention({ canWrite = false, refresh = 0 }) {
     <footer className="prevention-footnote"><ShieldCheck size={17}/> Decision support is advisory. Use authorized data, equity and privacy review, community consultation and appropriate outcome evaluation before implementing real-world measures.</footer>
 
     {createDraft && <div className="prevention-modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !working) setCreateDraft(null); }}>
-      <section className="prevention-modal" role="dialog" aria-modal="true" aria-labelledby="create-prevention-title">
+      <section ref={createDialogRef} tabIndex={-1} className="prevention-modal" role="dialog" aria-modal="true" aria-labelledby="create-prevention-title">
         <h2 id="create-prevention-title">Propose preventive action</h2>
         <p className="prevention-modal-subtitle">{createDraft.action_title} · {createDraft.zone === MISSING_ZONE ? 'Unspecified zone' : createDraft.zone}</p>
         <p>Based on {number(createDraft.evidence_count)} matching fictional incidents. You are creating a proposal, not issuing a patrol order.</p>
@@ -331,7 +334,7 @@ export default function Prevention({ canWrite = false, refresh = 0 }) {
     </div>}
 
     {editDraft && <div className="prevention-modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !updating) setEditDraft(null); }}>
-      <section className="prevention-modal" role="dialog" aria-modal="true" aria-labelledby="edit-prevention-title">
+      <section ref={editDialogRef} tabIndex={-1} className="prevention-modal" role="dialog" aria-modal="true" aria-labelledby="edit-prevention-title">
         <h2 id="edit-prevention-title">Edit action details</h2><p>{editDraft.title}</p>
         <form onSubmit={saveEdit} className="prevention-modal-form">
           <label>Coordinator<input required maxLength={100} minLength={2} value={editDraft.owner} onChange={e => setEditDraft(f => ({ ...f, owner: e.target.value }))}/></label>
