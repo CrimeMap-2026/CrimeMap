@@ -81,7 +81,7 @@ The map also offers links to official Puducherry Police directory/statistics and
 ## Included in Module 01
 
 - FastAPI REST API for incident create, read, list/filter, status update, and deletion.
-- CSV/JSON import with strict record validation. A rejected row aborts the entire import.
+- **Smart CSV/JSON import preview** within Incident Management: review each row before saving, including validation errors, possible duplicates against existing database rows or earlier rows in the file, and nonblocking demonstration-grid/zone warnings. Invalid rows block confirmation; eligible rows import on explicit confirmation while duplicates are skipped. The original strict import endpoint remains backward-compatible.
 - SQLAlchemy storage with SQLite by default and PostgreSQL support via `DATABASE_URL`.
 - React/Vite incident-management screen with filters, pagination, **click-and-drag map location picker inside Add Incident**, import, and status updates. Placing, dragging, or centering the pin automatically fills latitude/longitude **and suggests a fictional Demo Zone A–D** based on the nearest demo reference point within 3.5 km. You can manually override the zone; moving/clearing the pin clears outdated zone values. Outside the demo reference area, no zone is guessed. **This is a prototype heuristic, not an official police-station or administrative boundary lookup.** A keyboard-accessible **Use map center** option is included, and saving requires a selected location.
 - A 100-record synthetic dataset (original 36 plus 64 new fictional samples), with an idempotent seed script.
@@ -155,6 +155,10 @@ JSON can be an array of objects with these fields or `{ "incidents": [ ... ] }`.
 
 For demonstration safety, the API **always** sets `source_type` to `synthetic`, never to `official`, including imported records. Files may contain up to 1,000 rows / 2 MB. Imports are transactional.
 
+**Import workflow:** Open **Incidents → Import incident data → Choose file**. A read-only preview displays all rows' statuses, a count of ready/duplicate/invalid rows and optional warnings. Fix any invalid row in the source file and reselect it. If the remaining records look correct, click **Import new records**. The confirmed import revalidates the upload and skips potential duplicates by default. Nothing is written during preview; uploads do not modify the existing 100 seeded records.
+
+**Duplicate rule:** A possible duplicate has the same category, UTC occurrence second and latitude/longitude rounded to six decimal places. This is intentionally conservative and not a guaranteed incident identity: different events could share those values, and events with slightly different time/locations won't be flagged. Duplicate matches are never automatically merged or overwritten. When using the API directly, `POST /api/incidents/import?skip_duplicates=true` opts into safe skipping; omitting the query parameter preserves the legacy importer. Preview and import both require Officer or Administrator permissions.
+
 ## API endpoints
 
 | Method | URL | Description |
@@ -165,7 +169,8 @@ For demonstration safety, the API **always** sets `source_type` to `synthetic`, 
 | GET | `/api/incidents/{id}` | Get one incident |
 | PATCH | `/api/incidents/{id}` | Change status and/or description |
 | DELETE | `/api/incidents/{id}` | Delete an incident |
-| POST | `/api/incidents/import` | Upload CSV or JSON as multipart `file` |
+| POST | `/api/incidents/import/preview` | Read-only validated row preview with duplicate and warning classifications (Officer+) |
+| POST | `/api/incidents/import` | Transactional CSV/JSON upload; `skip_duplicates=true` skips possible duplicate records (Officer+) |
 | GET | `/api/map/incidents` | Bounding-box GeoJSON with category/status filters, up to 2,000 points |
 | GET | `/api/analytics/overview` | Complete filtered summary and category/status/date/hour/zone aggregates |
 | GET | `/api/analytics/filters` | Category/status choices and distinct synthetic demonstration zones |
@@ -195,4 +200,4 @@ CrimeMap/
 
 This prototype has cookie-based authentication and four backend-enforced authorization levels, but **is not production-ready** and supports only fictional records. Before any real police data: implement an independently reviewed security design, MFA/centralized identities, tamper-resistant comprehensive audit infrastructure, encrypted transport and backups, retention/access policies, and written authorization. Avoid collecting victim/witness names or addresses in the demonstration. See [AUTHORIZATION.md](AUTHORIZATION.md).
 
-**Next:** A consistent date filter on map modes, explainable period-to-period spatial comparison, data-quality checks, production-grade audit trails, and verified infrastructure data can be developed as distinct future features. No live police system is connected. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
+**Next:** A consistent date filter on map modes, additional data-quality review, production-grade audit trails, and verified infrastructure data can be developed as distinct future features. No live police system is connected. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
