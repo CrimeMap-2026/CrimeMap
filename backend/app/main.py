@@ -2,12 +2,15 @@
 import csv
 import io
 import json
+import os
 import uuid
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -335,3 +338,15 @@ async def import_incidents(
         })
         db.commit()
     return ImportResult(imported=len(selected), skipped=skipped if skip_duplicates else None)
+
+# A Cloud Run revision serves its compiled Vite assets under this *same origin*.
+# Register last so all existing API/auth/health routes have precedence. Local
+# Vite development is unchanged when CRIMEMAP_STATIC_DIR is unset.
+_static_dir = os.environ.get("CRIMEMAP_STATIC_DIR", "").strip()
+if os.getenv("CRIMEMAP_DEPLOYMENT") == "cloud-run" and not _static_dir:
+    raise RuntimeError("Cloud Run requires CRIMEMAP_STATIC_DIR (compiled React assets)")
+if _static_dir:
+    _static_path = Path(_static_dir).resolve()
+    if not (_static_path / "index.html").is_file():
+        raise RuntimeError(f"Compiled frontend missing index.html: {_static_path}")
+    app.mount("/", StaticFiles(directory=_static_path, html=True), name="frontend")
