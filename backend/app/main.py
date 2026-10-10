@@ -307,7 +307,7 @@ async def preview_import(
     }
 
 
-@app.post("/api/incidents/import", response_model=ImportResult, status_code=201,
+@app.post("/api/incidents/import", response_model=ImportResult, response_model_exclude_none=True, status_code=201,
           dependencies=[Depends(require_permission("write"))])
 async def import_incidents(
     db: Annotated[Session, Depends(get_db)],
@@ -330,4 +330,4 @@ async def import_incidents(
             "record_count": len(selected),
         })
         db.commit()
-    return ImportResult(imported=len(selected), skipped=skipped)
+    return ImportResult(imported=len(selected), skipped=skipped if skip_duplicates else None)
