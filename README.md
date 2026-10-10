@@ -37,6 +37,12 @@ CrimeMap now requires an account to use its API and UI. There are four backend-e
 
 **Development-only security:** Do not expose the project to the internet or import real law-enforcement records. See [AUTHORIZATION.md](AUTHORIZATION.md) for the permissions matrix, setup instructions, technical details, and requirements before any operational deployment.
 
+## Built-in change history (Administration)
+
+The existing **User Management** page now contains an administrator-only **Change history** panel with record-type filtering, pagination and timestamps. FastAPI writes application-level audit entries for successful incident create/edit/delete/import operations and prevention-plan creation/edits, including the responsible account and minimal field-change indicators. Events are stored in a separate table **in the same transaction** as the changes. Free-text notes and passwords are never logged. This history starts from the upgrade forward; it is not tamper-proof or production-grade.
+
+See [AUTHORIZATION.md](AUTHORIZATION.md) and [DATABASE.md](DATABASE.md) for endpoint, privacy and SQLite/PostgreSQL details.
+
 ## Module 04 — Prevention & Action Planner
 
 CrimeMap now has a distinct **Prevention planner** page that addresses the "Prevent" part of the hackathon statement without confusing it with an automated crime-prediction model.
@@ -165,6 +171,7 @@ For demonstration safety, the API **always** sets `source_type` to `synthetic`, 
 | GET | `/api/analytics/filters` | Category/status choices and distinct synthetic demonstration zones |
 | GET | `/api/hotspots/grid` | Synthetic grid-cell counts, ranks, bounds, and GeoJSON features |
 | GET | `/api/hotspots/compare` | Synthetic before/after grid counts in identical cells (Analyst or higher) |
+| GET | `/api/admin/audit` | Administrator-only paginated change history for synthetic incidents and prevention plans |
 | GET | `/api/operations/overview` | Static fictional CCTV, accident and patrol track overlays for Module 02 |
 
 ## Folder structure
@@ -186,6 +193,6 @@ CrimeMap/
 
 ## Security and future modules
 
-This prototype has cookie-based authentication and four backend-enforced authorization levels, but **is not production-ready** and supports only fictional records. Before any real police data: implement an independently reviewed security design, MFA/centralized identities, comprehensive audit logs, encrypted transport and backups, retention/access policies, and written authorization. Avoid collecting victim/witness names or addresses in the demonstration. See [AUTHORIZATION.md](AUTHORIZATION.md).
+This prototype has cookie-based authentication and four backend-enforced authorization levels, but **is not production-ready** and supports only fictional records. Before any real police data: implement an independently reviewed security design, MFA/centralized identities, tamper-resistant comprehensive audit infrastructure, encrypted transport and backups, retention/access policies, and written authorization. Avoid collecting victim/witness names or addresses in the demonstration. See [AUTHORIZATION.md](AUTHORIZATION.md).
 
-**Next:** A consistent date filter on map modes, explainable period-to-period spatial comparison, data-quality checks, access audit trails, and verified infrastructure data can be developed as distinct future features. No live police system is connected. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
+**Next:** A consistent date filter on map modes, explainable period-to-period spatial comparison, data-quality checks, production-grade audit trails, and verified infrastructure data can be developed as distinct future features. No live police system is connected. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
