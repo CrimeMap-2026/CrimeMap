@@ -7,6 +7,7 @@ import { CATEGORIES, STATUSES, changeStatus, changeOwnPassword, createIncident, 
 import Login from './modules/auth/Login.jsx';
 import './modules/auth/auth.css';
 import CrimeMap from './modules/map/CrimeMap.jsx';
+import { incidentMapFocus } from './modules/map/incident-focus.js';
 import IncidentLocationPicker, { validIncidentPosition } from './modules/incidents/IncidentLocationPicker.jsx';
 import { locationFieldsForPin } from './modules/incidents/location-utils.js';
 import ImportPreview from './modules/incidents/ImportPreview.jsx';
@@ -49,6 +50,7 @@ function App() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [accountError, setAccountError] = useState('');
   const [view, setView] = useState('incidents');
+  const [mapFocus, setMapFocus] = useState(null);
   const [filters, setFilters] = useState(initialFilters);
   const [data, setData] = useState({ items: [], total: 0, limit: 10, offset: 0 });
   const [form, setForm] = useState(initialForm);
@@ -166,6 +168,16 @@ function App() {
     setRefresh((value) => value + 1);
   }
 
+  function locateIncident(incident) {
+    const target = incidentMapFocus(incident);
+    if (!target) {
+      feedback('error', 'This incident has no valid map coordinates.');
+      return;
+    }
+    setMapFocus(target);
+    setView('map');
+  }
+
   async function handleStatus(id, nextStatus) {
     setBusy(true);
     try {
@@ -202,7 +214,7 @@ function App() {
         <div className="logo"><span className="logo-symbol"><MapPinned size={22} /></span><span>Crime<span className="accent">Map</span><small>INTELLIGENCE PLATFORM</small></span></div>
         <div className="nav-title">WORKSPACE</div>
         <button type="button" className={`nav-item ${view === 'incidents' ? 'selected' : ''}`} onClick={() => setView('incidents')}><Database size={17} /> Incidents <span className="nav-current">01</span></button>
-        <button type="button" className={`nav-item ${view === 'map' ? 'selected' : ''}`} onClick={() => setView('map')}><MapPinned size={17} /> Geospatial intelligence <span className="nav-current">02</span></button>
+        <button type="button" className={`nav-item ${view === 'map' ? 'selected' : ''}`} onClick={() => { setMapFocus(null); setView('map'); }}><MapPinned size={17} /> Geospatial intelligence <span className="nav-current">02</span></button>
         {canAnalyze && <button type="button" className={`nav-item ${view === 'analytics' ? 'selected' : ''}`} aria-current={view === 'analytics' ? 'page' : undefined} onClick={() => setView('analytics')}><LayoutDashboard size={17} /> Analytics <span className="nav-current">03</span></button>}
         {canAnalyze && <button type="button" className={`nav-item ${view === 'prevention' ? 'selected' : ''}`} aria-current={view === 'prevention' ? 'page' : undefined} onClick={() => setView('prevention')}><HeartHandshake size={17} /> Prevention planner <span className="nav-current">04</span></button>}
         {isAdmin && <button type="button" className={`nav-item ${view === 'users' ? 'selected' : ''}`} aria-current={view === 'users' ? 'page' : undefined} onClick={() => setView('users')}><UsersRound size={17} /> User management <span className="nav-current">ADM</span></button>}
@@ -212,7 +224,8 @@ function App() {
       <main className="main-area">
         <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> {view === 'map' ? 'Geospatial view' : view === 'analytics' ? 'Analysis' : view === 'prevention' ? 'Decision support' : view === 'users' ? 'Administration' : 'Data management'} <span>/</span> <strong>{view === 'map' ? 'Geospatial intelligence' : view === 'analytics' ? 'Analytics' : view === 'prevention' ? 'Prevention planner' : view === 'users' ? 'Users' : 'Incidents'}</strong></span><div className="auth-actions"><span className="auth-role-chip">{user.role}</span><button type="button" className="button subtle" onClick={() => setAccountOpen(true)}><KeyRound size={16} /> Password</button><button type="button" className="button subtle" onClick={logout}><LogOut size={16} /> Sign out</button></div></header>
         <div className="content">
-          {view === 'users' && isAdmin ? <Suspense fallback={<div className="panel empty" role="status">Loading user management…</div>}><Users currentUser={user} /></Suspense> : view === 'prevention' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">Loading synthetic prevention planner…</div>}><Prevention canWrite={canWrite} refresh={refresh} /></Suspense> : view === 'analytics' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} canAnalyze={canAnalyze} /> : <>
+          {view === 'users' && isAdmin ? <Suspense fallback={<div className="panel empty" role="status">Loading user management…</div>}><Users currentUser={user} /></Suspense> : view === 'prevention' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">Loading synthetic prevention planner…</div>}><Prevention canWrite={canWrite} refresh={refresh} /></Suspense> : view === 'analytics' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} canAnalyze={canAnalyze} focusIncident={mapFocus}
+                onClearFocus={() => setMapFocus(null)} /> : <>
           <div className="heading-row">
             <div><div className="eyebrow">MODULE 01 · INCIDENT MANAGEMENT</div><h1>Crime incident records</h1><p className="intro">Manage location-based incident data for mapping and analysis.</p></div>
             {canWrite && <button className="button primary" onClick={() => { setFormError(''); setIsOpen(true); }}><Plus size={17} /> Add incident</button>}
@@ -243,7 +256,11 @@ function App() {
                 <td>{formattedDate(incident.occurred_at)}</td>
                 <td>{incident.police_station || '—'}<span className="subcell mono">{incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}</span></td>
                 <td><span className={`status-tag ${incident.status}`}>{statusLabel(incident.status)}</span></td>
-                <td><div className="actions">{canWrite ? <select disabled={busy} aria-label={`Change status of ${incident.id}`} value={incident.status} onChange={(e) => handleStatus(incident.id, e.target.value)}>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select> : <span className="map-status">Read only</span>}{canDelete && <button disabled={busy} className="icon-button" aria-label={`Delete ${incident.id}`} title="Delete synthetic incident" onClick={() => handleDelete(incident.id)}><Trash2 size={16} /></button>}</div></td>
+                <td><div className="actions"><button type="button" className="button subtle incident-locate-action"
+                  aria-label={`Locate incident ${incident.id} on map`}
+                  title="Locate this synthetic incident in Geospatial Intelligence"
+                  onClick={() => locateIncident(incident)}><MapPinned size={15} /> Map</button>
+                {canWrite ? <select disabled={busy} aria-label={`Change status of ${incident.id}`} value={incident.status} onChange={(e) => handleStatus(incident.id, e.target.value)}>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select> : <span className="map-status">Read only</span>}{canDelete && <button disabled={busy} className="icon-button" aria-label={`Delete ${incident.id}`} title="Delete synthetic incident" onClick={() => handleDelete(incident.id)}><Trash2 size={16} /></button>}</div></td>
               </tr>)}</tbody></table></div>
             <div className="table-footer"><span>Showing {data.total ? data.offset + 1 : 0}–{Math.min(data.offset + data.items.length, data.total)} of {data.total}</span><div className="pagination"><button className="button subtle" disabled={filters.offset === 0 || loading} onClick={() => setFilters((current) => ({ ...current, offset: Math.max(0, current.offset - current.limit) }))}><ArrowLeft size={15} /> Previous</button><button className="button subtle" disabled={filters.offset + filters.limit >= data.total || loading} onClick={() => setFilters((current) => ({ ...current, offset: current.offset + current.limit }))}>Next <ArrowRight size={15} /></button></div></div>
           </section>
