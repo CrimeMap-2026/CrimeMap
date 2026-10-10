@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileUp, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import { importIncidents, previewIncidents } from '../../api';
 import './import-preview.css';
@@ -12,6 +12,7 @@ const STATUS = {
 const PAGE_SIZE = 20;
 
 export default function ImportPreview({ disabled = false, onImported }) {
+  const fileInputRef = useRef(null);
   const [file, setFile] = useState(null);
   const [review, setReview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -77,12 +78,15 @@ export default function ImportPreview({ disabled = false, onImported }) {
   const locked = disabled || importing;
 
   return <>
-    <label className={`button outline upload-button ${locked ? 'disabled' : ''}`}>
+    <button type="button" className="button outline upload-button"
+      aria-label="Choose CSV or JSON to preview" disabled={locked}
+      onClick={() => fileInputRef.current?.click()}>
       <FileUp size={16} />
       {file ? 'Choose another file' : 'Choose file'}
-      <input type="file" accept=".csv,.json" aria-label="Choose CSV or JSON to preview"
-        disabled={locked} onChange={chooseFile} hidden />
-    </label>
+    </button>
+    <input ref={fileInputRef} type="file" accept=".csv,.json"
+      aria-label="Upload CSV or JSON incidents" disabled={locked}
+      onChange={chooseFile} tabIndex={-1} hidden />
 
     {file && <section className="import-review" aria-label="Import file review">
       <div className="import-review-heading">
