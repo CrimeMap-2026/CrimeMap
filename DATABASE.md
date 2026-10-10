@@ -97,6 +97,14 @@ When you start FastAPI with `python3 start.py`, the local prototype's SQLAlchemy
 
 Run `python -m scripts.db_status` from the `backend` directory to inspect incident, account, session and prevention-plan row counts. For an operational system, replace automatic schema creation with reviewed, versioned Alembic migrations.
 
+## Audit event history table
+
+The new `audit_events` table stores restricted, append-only **application-generated** events for changes to synthetic incidents and prevention plans. It does not contain passwords, free-text descriptions, session tokens or planning notes. Entries are committed atomically with each tracked record change.
+
+When you restart FastAPI after updating the repository, SQLAlchemy `create_all` adds the missing `audit_events` table to the **currently configured** SQLite or PostgreSQL database. It **does not remove or reset** your 100 synthetic incidents, users or existing action plans. The audit history begins only after the change is installed. View its row count with `python -m scripts.db_status` and its filtered entries under the Administrator's existing **User Management → Change history** section.
+
+This is not tamper-evident, a forensic log or a replacement for dedicated production auditing. Use a secure append-only external audit sink and a documented retention policy before any real deployment.
+
 ## Data files and behavior
 
 | Resource | Purpose |
