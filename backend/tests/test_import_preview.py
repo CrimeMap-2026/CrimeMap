@@ -164,3 +164,96 @@ def test_preview_limits_and_permissions(client):
     assert login.status_code == 200
     assert upload(client, "/api/incidents/import/preview", [EXAMPLE]).status_code == 403
     assert upload(client, "/api/incidents/import", [EXAMPLE], skip=True).status_code == 403
+
+
+def test_shipped_seed_csv_with_id_previews_as_ready_and_imports_with_server_ids(client):
+    """Regression: the user's data/synthetic_incidents.csv has an id column."""
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[2] / "data" / "synthetic_incidents.csv"
+    raw = path.read_bytes()
+    preview = client.post("/api/incidents/import/preview", files={
+        "file": (path.name, raw, "text/csv"),
+    })
+    assert preview.status_code == 200, preview.text
+    data = preview.json()
+    assert (data["total"], data["ready"], data["invalid"]) == (100, 100, 0)
+    assert (data["duplicate_existing"], data["duplicate_file"]) == (0, 0)
+    assert client.get("/api/incidents").json()["total"] == 0
+
+    confirm = client.post("/api/incidents/import?skip_duplicates=true", files={
+        "file": (path.name, raw, "text/csv"),
+    })
+    assert confirm.status_code == 201, confirm.text
+    assert confirm.json() == {"imported": 100, "skipped": 0, "source_type": "synthetic"}
+    stored = client.get("/api/incidents", params={"limit": 200}).json()
+    assert stored["total"] == 100
+    # The CSV's DEMO IDs were import metadata, not attacker-controlled keys.
+    assert all(not row["id"].startswith("DEMO-") for row in stored["items"])
+
+    repeat = client.post("/api/incidents/import/preview", files={
+        "file": (path.name, raw, "text/csv"),
+    }).json()
+    assert (repeat["ready"], repeat["duplicate_existing"], repeat["invalid"]) == (0, 100, 0)
+
+
+def test_shipped_seed_csv_against_existing_100_demo_ids_is_all_duplicate(client):
+    """A database populated by the seed script must not gain 100 repeat rows."""
+    import csv
+    from pathlib import Path
+    from sqlalchemy.orm import Session
+
+    import app.main as main_module
+    from app.models import Incident
+    from app.schemas import IncidentCreate
+
+    path = Path(__file__).resolve().parents[2] / "data" / "synthetic_incidents.csv"
+    with Session(main_module.engine) as db, path.open(encoding="utf-8", newline="") as source:
+        for row in csv.DictReader(source):
+            model = IncidentCreate.model_validate({key: value for key, value in row.items() if key != "id"})
+            db.add(Incident(
+                id=row["id"], category=model.category.value,
+                occurred_at=model.occurred_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                latitude=model.latitude, longitude=model.longitude,
+                police_station=model.police_station, description=model.description,
+                status=model.status.value, source_type="synthetic",
+            ))
+        db.commit()
+
+    raw = path.read_bytes()
+    preview = client.post("/api/incidents/import/preview", files={
+        "file": (path.name, raw, "text/csv"),
+    })
+    assert preview.status_code == 200, preview.text
+    summary = preview.json()
+    assert summary["total"] == 100
+    assert summary["invalid"] == 0
+    assert summary["ready"] == 0
+    assert summary["duplicate_existing"] == 100
+    assert client.get("/api/incidents").json()["total"] == 100
+
+    confirm = client.post("/api/incidents/import?skip_duplicates=true", files={
+        "file": (path.name, raw, "text/csv"),
+    })
+    assert confirm.status_code == 201, confirm.text
+    assert confirm.json()["imported"] == 0
+    assert confirm.json()["skipped"] == 100
+    assert client.get("/api/incidents").json()["total"] == 100
+    assert client.get("/api/admin/audit").json()["total"] == 0
+
+
+def test_optional_id_does_not_relax_validation_for_any_other_extra_field(client):
+    valid = {**EXAMPLE, "id": "DEMO-0001"}
+    preview = upload(client, "/api/incidents/import/preview", [
+        valid, {**valid, "unexpected_column": "must remain forbidden"},
+    ])
+    assert preview.status_code == 200
+    body = preview.json()
+    assert body["ready"] == 1 and body["invalid"] == 1
+    assert "unexpected_column" in " ".join(body["rows"][1]["errors"])
+    assert client.get("/api/incidents").json()["total"] == 0
+    denied = upload(client, "/api/incidents/import", [
+        valid, {**valid, "unexpected_column": "must remain forbidden"},
+    ], skip=True)
+    assert denied.status_code == 422
+    assert client.get("/api/incidents").json()["total"] == 0
