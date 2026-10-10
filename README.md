@@ -4,6 +4,31 @@ A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intell
 
 > **Data warning:** Every bundled incident is **synthetic**. The coordinates, incident types, zones, and timestamps were invented to test application behavior. They do **not** describe real Puducherry crimes. Do not use this build for operational policing or public crime claims.
 
+## One-command development launcher (Fedora / Fish)
+
+Once you've installed the backend Python environment and frontend npm dependencies, start **both FastAPI and Vite** in one terminal from the repository root:
+
+```fish
+cd ~/Documents/Repos/CrimeMap-work
+python3 start.py
+```
+
+The launcher finds the repository root automatically, uses `backend/.venv/bin/python`, starts FastAPI at `http://127.0.0.1:8000` and Vite at `http://127.0.0.1:5173`, streams both logs to the same terminal, and **stops both (including reload processes) when you press Ctrl+C**. It reserves Vite port 5173 rather than silently switching to another port, which keeps the local login origin check consistent.
+
+For first-time setup only:
+
+```fish
+cd backend
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+cd ../frontend
+npm install
+cd ..
+python3 start.py
+```
+
+The launcher does not automatically seed or erase data, create administrator accounts, install dependencies, or start the optional PostgreSQL Docker service. Your existing SQLite database and account are preserved. You can still start each server manually using the steps below.
+
 ## Authorization and access levels
 
 CrimeMap now requires an account to use its API and UI. There are four backend-enforced roles: **Viewer** (read-only incidents and basic maps), **Analyst** (plus statistics/grid analysis), **Officer** (plus create/import/status updates), and **Administrator** (plus deletion and user management). Authentication uses revocable HttpOnly cookie sessions; the frontend shows only permitted controls, while the FastAPI routes enforce access on every request.
