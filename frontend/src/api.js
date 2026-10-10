@@ -151,3 +151,30 @@ export function resetUserPassword(id, password) {
     body: JSON.stringify({ password }),
   });
 }
+
+export function fetchPreventionInsights(filters, signal) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) params.set(key, value);
+  }
+  const qs = params.toString();
+  return request('/api/prevention/insights' + (qs ? '?' + qs : ''), { signal });
+}
+
+export function fetchPreventionPlans(signal) {
+  return request('/api/prevention/plans', { signal });
+}
+
+export function createPreventionPlan(payload) {
+  return request('/api/prevention/plans', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePreventionPlan(id, payload) {
+  return request(`/api/prevention/plans/${encodeURIComponent(id)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
