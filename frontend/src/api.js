@@ -186,3 +186,13 @@ export function updatePreventionPlan(id, payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function listAuditEvents(filters = {}, signal) {
+  const params = new URLSearchParams({
+    limit: String(filters.limit || 15),
+    offset: String(filters.offset || 0),
+  });
+  if (filters.entity_type) params.set('entity_type', filters.entity_type);
+  if (filters.actor_id) params.set('actor_id', filters.actor_id);
+  return request(`/api/admin/audit?${params}`, { signal });
+}
