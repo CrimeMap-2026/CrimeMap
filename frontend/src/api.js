@@ -92,6 +92,14 @@ export function fetchAnalyticsFilters(signal) {
   return request('/api/analytics/filters', { signal });
 }
 
+export function fetchGridComparison(filters, signal) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== '' && value !== null && value !== undefined) query.set(key, value);
+  }
+  return request(`/api/hotspots/compare?${query}`, { signal });
+}
+
 export function fetchHotspots(filters, signal) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
