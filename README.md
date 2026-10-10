@@ -1,231 +1,92 @@
-# CrimeMap — Four Workspaces: Incidents, Geospatial Intelligence, Analytics & Prevention
+# CrimeMap
 
-A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intelligence, Analytics & Decision-Support System**. This version is **for local development only**.
+**Geospatial Crime Intelligence, Analytics & Decision Support** — a local prototype for Puducherry Police Hackathon 2026 (Problem Statement 02).
 
-> **Data warning:** Every bundled incident is **synthetic**. The coordinates, incident types, zones, and timestamps were invented to test application behavior. They do **not** describe real Puducherry crimes. Do not use this build for operational policing or public crime claims.
+> **Synthetic demonstration data only.** All incident locations, zone labels, patrol/CCTV overlays and reports are fictional. CrimeMap is **not** a real police platform, validated crime forecast or operational decision-making tool.
 
-## Final UI polish and five-minute hackathon demo
+## Quick start
 
-The existing workspaces remain unchanged. The narrow-screen workspace navigation now uses a horizontally scrollable rail; the import picker has a keyboard-operable button; and key dialogs trap keyboard focus, close on Escape when idle and return focus to their opener. The incident registry also exposes an inline load-error retry and automatically moves to a valid previous page after the last item on the current page is deleted. **No new page, database table or reseeding is required.**
-
-The ready-to-present workflow and a **manual cross-device/accessibility checklist** are in [HACKATHON_DEMO.md](HACKATHON_DEMO.md). Automated tests validate code and API behavior; visual/keyboard testing on physical devices still needs a manual run.
-
-## One-command development launcher (Fedora / Fish)
-
-Once you've installed the backend Python environment and frontend npm dependencies, start **both FastAPI and Vite** in one terminal from the repository root:
-
-```fish
-cd ~/Documents/Repos/CrimeMap-work
-python3 start.py
-```
-
-The launcher finds the repository root automatically, uses `backend/.venv/bin/python`, starts FastAPI at `http://127.0.0.1:8000` and Vite at `http://127.0.0.1:5173`, streams both logs to the same terminal, and **stops both (including reload processes) when you press Ctrl+C**. It reserves Vite port 5173 rather than silently switching to another port, which keeps the local login origin check consistent.
-
-For first-time setup only:
+Requires **Python 3.11+**, **Node.js/npm**, and Fedora/Linux or macOS for the one-command launcher. On a **first install only**:
 
 ```fish
 cd backend
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m app.bootstrap_admin
 cd ../frontend
 npm install
 cd ..
 python3 start.py
 ```
 
-The launcher does not automatically seed or erase data, create administrator accounts, install dependencies, or start the optional PostgreSQL Docker service. Your existing SQLite database and account are preserved. You can still start each server manually using the steps below.
-
-## Authorization and access levels
-
-CrimeMap now requires an account to use its API and UI. There are four backend-enforced roles: **Viewer** (read-only incidents and basic maps), **Analyst** (plus statistics/grid analysis), **Officer** (plus create/import/status updates), and **Administrator** (plus deletion and user management). Authentication uses revocable HttpOnly cookie sessions; the frontend shows only permitted controls, while the FastAPI routes enforce access on every request.
-
-**First run:** in `backend/`, after activating the Python environment, execute `python -m app.bootstrap_admin` and choose your own password. No default admin accounts or credentials are included. Then launch FastAPI and Vite and sign in. Administrators can create other users through **User management**.
-
-**Development-only security:** Do not expose the project to the internet or import real law-enforcement records. See [AUTHORIZATION.md](AUTHORIZATION.md) for the permissions matrix, setup instructions, technical details, and requirements before any operational deployment.
-
-## Built-in change history (Administration)
-
-The existing **User Management** page now contains an administrator-only **Change history** panel with record-type filtering, pagination and timestamps. FastAPI writes application-level audit entries for successful incident create/edit/delete/import operations and prevention-plan creation/edits, including the responsible account and minimal field-change indicators. Events are stored in a separate table **in the same transaction** as the changes. Free-text notes and passwords are never logged. This history starts from the upgrade forward; it is not tamper-proof or production-grade.
-
-See [AUTHORIZATION.md](AUTHORIZATION.md) and [DATABASE.md](DATABASE.md) for endpoint, privacy and SQLite/PostgreSQL details.
-
-## Module 04 — Prevention & Action Planner
-
-CrimeMap now has a distinct **Prevention planner** page that addresses the "Prevent" part of the hackathon statement without confusing it with an automated crime-prediction model.
-
-- Explore **descriptive observations** grouped by demonstration zone and crime category, with an optional date range. Cards show exact fictional incident counts, the selected share, and two category-specific general safeguarding measures.
-- Example prevention options: home/vehicle security awareness, cyber-fraud literacy, victim support information, lighting and maintenance assessments, and voluntary community safety education.
-- Officers and Administrators can **create and track prevention action plans** with a coordinator, due date, rationale/evidence snapshot, progress notes and status transitions; Analysts can view/export but cannot modify proposals.
-- A **Review observed counts** button on completed plans shows an equal-duration earlier/later fictional incident comparison for the saved zone/category. The period selection is explicit and can include newly CSV-imported records. This is **not** a verified prevention-effectiveness measure: periods are manually chosen, not tied to activity dates, and count changes cannot be attributed to the plan.
-- Use **Print summary** for a presentation-ready printable overview or export the saved plan board as CSV.
-- All plan and analytics endpoints enforce permissions in FastAPI; plans are persisted in a new SQLAlchemy table. Existing accounts and incident records remain unchanged.
-- These are synthetic demonstration proposals for human review — **not verified risk predictions, patrol instructions or proven reductions in crime**. See [MODULE04.md](MODULE04.md) for presentation instructions and limitations.
-
-## One-click consolidated presentation PDF (inside Analytics)
-
-Use **Analytics → Build presentation PDF** to export a single downloadable, on-demand PDF. Choose any combination of existing **Incident analytics**, **Fixed-grid geographic findings**, and **Saved prevention plans**; adjust grid width and count threshold if geographic findings are selected. The export uses the *currently applied Analytics filters* (IST date range, category, status, and named/missing zone) and reads fresh database aggregates; there is no separate Reports page or saved reporting table.
-
-The PDF contains vector count charts, a **schematic spatial cell-location diagram** based on existing fixed-grid aggregates (not a copyrighted street-tile screenshot), plus up to 12 latest matching saved prevention plans and the count of all matching plans. Stored plans are filtered by category/zone only, not incident status/date, because plans have a separate lifecycle. No descriptions, owner/coordinator names, planning notes or incident-level coordinates are exported. Every page is labeled as synthetic demonstration material; differences in counts cannot establish safety, risk, prediction or prevention effectiveness.
-
-**Upgrade requirement:** after pulling changes, install the new server-side ReportLab PDF dependency *into your existing backend virtual environment* (do not recreate it or delete the database):
+The administrator bootstrap prompts for your own username/password. **Skip it if you already have an account.** On subsequent runs, from the repository root:
 
 ```fish
-cd ~/Documents/Repos/CrimeMap-work/backend
-.venv/bin/python -m pip install -r requirements.txt
-cd ..
 python3 start.py
 ```
 
-The route `GET /api/reports/presentation` requires Analyst, Officer or Administrator access and accepts the same Analytics filters plus `sections` (comma-separated `analytics,spatial,prevention`), `cell_size_m` (250–5000) and `min_count` (2–1000). The generated PDF is not stored server-side, and the existing incident and plan records are not modified.
+- **Application:** http://127.0.0.1:5173
+- **API and interactive docs:** http://127.0.0.1:8000/docs
+- **Health check:** http://127.0.0.1:8000/health
+- **Stop:** Ctrl+C (stops backend and frontend together)
 
-## Module 03 — Crime Analytics Dashboard
+After updates that change dependencies, run `cd backend && .venv/bin/python -m pip install -r requirements.txt` in the **existing** virtual environment. Don't delete your SQLite database or rebootstrap accounts when updating.
 
-- Open **Analytics** in the existing sidebar on desktop, tablet, or mobile.
-- Four summary cards and five charts cover matching incidents, categories, statuses, local occurrence dates/hours, and demonstration zones.
-- Filter by inclusive IST date range, category, status, and named or unspecified zone. Every chart uses the same database filters, without pagination limits.
-- All views are labeled **SYNTHETIC DEMONSTRATION DATA**, with loading, retry, empty states, and accessible chart data tables.
-- Analytics is read-only; no schema migration, reseeding, or database replacement is needed. See [MODULE03.md](MODULE03.md) for API semantics and validation details.
+For optional PostgreSQL, security configuration, detailed role permissions, backups and test commands, see [Developer setup](docs/SETUP.md).
 
-## Module 02 — Geospatial Intelligence (single map)
+## What it does
 
-The **Geospatial Intelligence** workspace uses one Leaflet/OpenStreetMap instance and four switchable modes:
+CrimeMap has **four workspaces**, not a separate screen for every visualization:
 
-1. **Markers:** Individual incident points, clusters, popups and visible incident list.
-2. **Heatmap:** Descriptive density of synthetic incident points.
-3. **Grid analysis:** Backend-computed fixed-square counts, density, ranks, date/zone/threshold controls and GeoJSON export.
-   - **Compare periods (within Grid Analysis):** Compare equal-length, non-overlapping local date ranges using the same cells and threshold. Highlight fictional cells newly above threshold, above threshold in both periods, or falling below it; select cells to inspect count changes and export the comparison. This is descriptive, not crime prediction.
-4. **Operations:** Same map, with toggles for incident points, fictional road accidents, hypothetical CCTV positions and simulated patrol tracks. A timeline slider displays historical demonstration patrol snapshots; selecting a synthetic incident compares straight-line distance to the nearest fictional unit.
+| Workspace | Capabilities |
+| --- | --- |
+| **Incidents** | Search, filter, paginate, create and update synthetic records. Place/drag a map marker to choose coordinates and suggest a nearby **fictional** Demo Zone A–D. **Map** on a record locates and highlights it on the existing map. CSV/JSON import previews validation problems, possible duplicates and warnings before confirmation. |
+| **Geospatial Intelligence** | One Leaflet/OpenStreetMap map with **Markers, Heatmap, Grid Analysis and Operations** modes. Fixed-grid count comparisons use equal-length, nonoverlapping periods; Operations overlays are fictional, not live GPS/CCTV feeds. |
+| **Analytics** | Counts by category, status, IST date/hour and demonstration zone. Shared filters cover all matching records, not just the visible registry page. **Build presentation PDF** exports selectable analytics, geographic findings and saved prevention-plan summaries. |
+| **Prevention Planner** | General safeguarding suggestions from descriptive fictional counts; human-reviewed action plans with status, owner and due date. Completed plans offer a **before/later count review**, not a causal effectiveness claim. |
 
-Category and status filters apply to incident layers. Grid controls affect grid results; operational layer toggles and timeline affect Operations mode. All maps and visualizations remain clearly labelled **synthetic demonstration data**, not real public-safety intelligence, CCTV feeds, active GPS, geofencing or dispatch capabilities.
+**Administrator → User management** includes account permissions and an application-level change history of selected successful incident and prevention-plan actions. It is not a tamper-proof audit system.
 
-The separate Operations navigation item, standalone React page and its duplicated Leaflet map have been removed. The `/api/operations/overview` endpoint remains read-only and is reused as an overlay source. There are no database schema changes.
+### Access levels
 
-The map also offers links to official Puducherry Police directory/statistics and citizen services; these are *external links*, not police integrations. See [MODULE02.md](MODULE02.md) and [PUBLIC_POLICE_PORTAL_RESEARCH.md](PUBLIC_POLICE_PORTAL_RESEARCH.md).
+**Viewer:** records and basic map. **Analyst:** analytics, spatial comparisons, prevention review and PDF. **Officer:** creates/imports incidents and manages prevention plans. **Administrator:** also deletes incidents and manages accounts/audit history. Permissions are enforced by FastAPI, not merely by hiding UI elements.
 
-## Included in Module 01
+## Data, imports and persistence
 
-- FastAPI REST API for incident create, read, list/filter, status update, and deletion.
-- **Smart CSV/JSON import preview** within Incident Management: review each row before saving, including validation errors, possible duplicates against existing database rows or earlier rows in the file, and nonblocking demonstration-grid/zone warnings. Invalid rows block confirmation; eligible rows import on explicit confirmation while duplicates are skipped. The original strict import endpoint remains backward-compatible.
-- SQLAlchemy storage with SQLite by default and PostgreSQL support via `DATABASE_URL`.
-- **Locate on Map:** Every incident row—including the 100 seeded records and later CSV imports—has a **Map** action for all authorized read roles. It opens the **existing Geospatial Intelligence → Markers map**, zooms to the exact coordinates, shows the incident popup and highlights its location with a gold ring. Previous map category/status filters are cleared so they cannot hide the record; the focus can be dismissed with **Clear selection**. This works without another map or backend schema change.
-- React/Vite incident-management screen with filters, pagination, **click-and-drag map location picker inside Add Incident**, import, and status updates. Placing, dragging, or centering the pin automatically fills latitude/longitude **and suggests a fictional Demo Zone A–D** based on the nearest demo reference point within 3.5 km. You can manually override the zone; moving/clearing the pin clears outdated zone values. Outside the demo reference area, no zone is guessed. **This is a prototype heuristic, not an official police-station or administrative boundary lookup.** A keyboard-accessible **Use map center** option is included, and saving requires a selected location.
-- A 100-record synthetic dataset (original 36 plus 64 new fictional samples), with an idempotent seed script.
-- API tests for CRUD, UTC conversion, field validation, atomic imports, filters, and pagination.
+- **Default database:** `backend/crimemap.db` (SQLite). Successfully imported records, accounts and saved plans persist across browser refreshes, sign-outs and server restarts. Optional PostgreSQL uses a **different** database; switching does not transfer SQLite records.
+- **Bundled demo data:** `data/synthetic_incidents.csv` contains 100 canonical fictional records with stable `DEMO-` IDs. To add only *missing* seed IDs to the current database, run `cd backend && .venv/bin/python -m scripts.seed_demo`. This is optional, idempotent and **never runs automatically**. Your total can be greater than 100 if you've imported more incidents.
+- **Manual import:** Inside **Incidents → Import incident data**, choose a CSV/JSON file (up to **2 MB / 1,000 rows**), inspect the read-only preview and confirm. Invalid rows block the batch; possible duplicates are skipped by default and existing records are not overwritten. Duplicate matching is a **heuristic**: category, UTC occurrence second and coordinates rounded to six decimal places.
+- **Sample CSV:** Download it from the import panel, or use `frontend/public/sample-data/synthetic_incidents.csv`. The import also accepts an optional `id` column as **ignored metadata**; newly imported IDs are server-generated. All imported records are labeled `synthetic`.
 
-## Start the backend
-
-Use Python 3.11+:
-
-```bash
-cd backend
-python -m venv .venv
-# macOS/Linux:
-source .venv/bin/activate  # Bash / Zsh. Fish: source .venv/bin/activate.fish
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-pip install -r requirements-dev.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-The API is at `http://127.0.0.1:8000` and the Swagger documentation is at `http://127.0.0.1:8000/docs`.
-
-SQLite is **already a database**: `crimemap.db` is created in `backend/` on startup, alongside account, session and prevention-action tables. Existing incident records and administrator accounts are preserved when pulling new code.
-
-To fill any missing demonstration records (including the 64 new records), stop at least any simultaneous seed process and run from `backend/`:
-
-```bash
-python -m scripts.seed_demo
-python -m scripts.db_status
-```
-
-The seed command adds only **missing** stable fixture IDs (`DEMO-0001` through `DEMO-0100`). It does not wipe the database, overwrite edited fixture records or change accounts. On a database containing the original 36 unmodified fixture IDs, it adds 64 for a total of **100**. If you also have extra manually added/imported incidents, your database total may be **more than 100**. Seeding is explicit rather than automatic on startup.
-
-The downloadable sample CSV contains 100 records but its normal **Import** operation creates new IDs each time; for updating existing seeded databases, prefer the idempotent command above rather than re-importing the CSV.
-
-### Optional PostgreSQL development database
-
-SQLite remains the default. CrimeMap already supports PostgreSQL through SQLAlchemy's `DATABASE_URL`. An optional `compose.yaml` now starts **PostgreSQL 17** on your local computer, using a password that you choose in an untracked `.env` file, a persistent Docker volume, a readiness check, and a loopback-only port binding.
-
-**PostgreSQL is a separate database, not an automatic conversion of your SQLite records or accounts.** To switch, set `DATABASE_URL` before running the admin bootstrap, seed script and API; if you don't set it, nothing changes. Do not delete `backend/crimemap.db` when trying PostgreSQL. Detailed Fish/Linux steps, verification and troubleshooting are in [DATABASE.md](DATABASE.md). PostGIS and formal versioned schema migrations remain future work.
-
-## Start the frontend
-
-In a second terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open `http://127.0.0.1:5173`. Vite proxies `/api` calls to the backend at port 8000.
-
-## Run API tests
-
-```bash
-cd backend
-pip install -r requirements-dev.txt
-pytest -q
-```
-
-## Import file format
-
-CSV headers:
+Required CSV fields (timezone-aware `occurred_at`):
 
 ```csv
 category,occurred_at,latitude,longitude,police_station,description,status
-Vehicle Theft,2026-09-12T21:30:00+05:30,11.9345,79.8302,Demo Zone A,SYNTHETIC TEST RECORD,reported
+Theft,2026-10-02T12:30:00+05:30,11.9332,79.8299,Demo Zone A,SYNTHETIC TEST RECORD,reported
 ```
 
-JSON can be an array of objects with these fields or `{ "incidents": [ ... ] }`. The ISO 8601 `occurred_at` timestamp **must include a timezone**, for example `+05:30` or `Z`. Valid statuses: `reported`, `under_investigation`, and `closed`. Valid categories are listed in `backend/app/schemas.py`.
+JSON can contain an array of incident objects, or an object with an `incidents` array. Valid statuses: `reported`, `under_investigation`, `closed`. Allowed categories are defined in `backend/app/schemas.py`.
 
-Both the import preview and confirmed import recognize the optional `id` column in the bundled `data/synthetic_incidents.csv` (e.g. `DEMO-0001`). It is **read-only source metadata**, not a client-assigned record ID: imported new records receive server-generated IDs, and possible matches already seeded in the database are shown as duplicates. Unrecognized extra columns remain invalid. The bundled CSV is not defective and does not need manual editing.
+**Important:** Zone selection is based on approximate fictional reference points, not authorized police-jurisdiction polygons. A displayed grid count or changed incident total does **not** imply a verified hotspot, public safety risk or successful intervention.
 
-For demonstration safety, the API **always** sets `source_type` to `synthetic`, never to `official`, including imported records. Files may contain up to 1,000 rows / 2 MB. Imports are transactional.
-
-**Import workflow:** Open **Incidents → Import incident data → Choose file**. A read-only preview displays all rows' statuses, a count of ready/duplicate/invalid rows and optional warnings. Fix any invalid row in the source file and reselect it. If the remaining records look correct, click **Import new records**. The confirmed import revalidates the upload and skips potential duplicates by default. Nothing is written during preview; uploads do not modify the existing 100 seeded records.
-
-**Duplicate rule:** A possible duplicate has the same category, UTC occurrence second and latitude/longitude rounded to six decimal places. This is intentionally conservative and not a guaranteed incident identity: different events could share those values, and events with slightly different time/locations won't be flagged. Duplicate matches are never automatically merged or overwritten. When using the API directly, `POST /api/incidents/import?skip_duplicates=true` opts into safe skipping; omitting the query parameter preserves the legacy importer. Preview and import both require Officer or Administrator permissions.
-
-## API endpoints
-
-| Method | URL | Description |
-| --- | --- | --- |
-| GET | `/health` | API health check |
-| GET | `/api/incidents` | List with category, status, search (`q`), limit, offset |
-| POST | `/api/incidents` | Create a synthetic incident |
-| GET | `/api/incidents/{id}` | Get one incident |
-| PATCH | `/api/incidents/{id}` | Change status and/or description |
-| DELETE | `/api/incidents/{id}` | Delete an incident |
-| POST | `/api/incidents/import/preview` | Read-only validated row preview with duplicate and warning classifications (Officer+) |
-| POST | `/api/incidents/import` | Transactional CSV/JSON upload; `skip_duplicates=true` skips possible duplicate records (Officer+) |
-| GET | `/api/map/incidents` | Bounding-box GeoJSON with category/status filters, up to 2,000 points |
-| GET | `/api/analytics/overview` | Complete filtered summary and category/status/date/hour/zone aggregates |
-| GET | `/api/analytics/filters` | Category/status choices and distinct synthetic demonstration zones |
-| GET | `/api/hotspots/grid` | Synthetic grid-cell counts, ranks, bounds, and GeoJSON features |
-| GET | `/api/hotspots/compare` | Synthetic before/after grid counts in identical cells (Analyst or higher) |
-| GET | `/api/admin/audit` | Administrator-only paginated change history for synthetic incidents and prevention plans |
-| GET | `/api/prevention/plans/{id}/review` | Read-only equal-length fictional incident count comparison for a completed plan (Analyst or higher) |
-| GET | `/api/operations/overview` | Static fictional CCTV, accident and patrol track overlays for Module 02 |
-
-## Folder structure
+## Project layout
 
 ```text
 CrimeMap/
-├── backend/
-│   ├── app/             # FastAPI, SQLAlchemy, validation
-│   ├── scripts/         # Idempotent synthetic-data seeder
-│   └── tests/           # API tests
-├── frontend/
-│   ├── public/          # Example downloadable CSV
-│   └── src/             # React UI
-├── data/                # 100 synthetic demonstration records
-├── compose.yaml          # Optional local PostgreSQL service
-├── .env.example          # Non-secret DB settings template
-└── README.md
+├── backend/             FastAPI, SQLAlchemy, auth, tests and seed utilities
+├── frontend/            React/Vite app and static sample CSV
+├── data/                Canonical 100-record synthetic seed
+├── docs/
+│   ├── SETUP.md         Developer setup, security, database and troubleshooting
+│   └── DEMO.md          Five-minute demo and manual QA checklist
+├── compose.yaml         Optional local PostgreSQL
+└── start.py             Start FastAPI + Vite together
 ```
 
-## Security and future modules
+## Testing and demo
 
-This prototype has cookie-based authentication and four backend-enforced authorization levels, but **is not production-ready** and supports only fictional records. Before any real police data: implement an independently reviewed security design, MFA/centralized identities, tamper-resistant comprehensive audit infrastructure, encrypted transport and backups, retention/access policies, and written authorization. Avoid collecting victim/witness names or addresses in the demonstration. See [AUTHORIZATION.md](AUTHORIZATION.md).
+Run `cd backend && .venv/bin/python -m pytest -q` for backend tests; from `frontend/` run `npm test` and `npm run build`. CI also checks PostgreSQL schema/seed behavior. API route details are available in FastAPI's interactive [local API docs](http://127.0.0.1:8000/docs) when the server is running.
 
-**Next:** A consistent date filter on map modes, additional data-quality review, production-grade audit trails, and verified infrastructure data can be developed as distinct future features. No live police system is connected. For very large datasets, replace the bounded map query with PostGIS spatial indexing and vector tiles.
+For presenting the complete **Record → Map → Analyse → Prevent → Review → Present** workflow, use the [five-minute demo guide](docs/DEMO.md).
+
+**Deployment warning:** This is a development-only proof of concept. Do not import actual police, victim, witness or operational data; public deployment would require authorization, verified geographic data, production security/privacy controls, proper migrations, backups and independent review.
