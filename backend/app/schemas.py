@@ -67,4 +67,5 @@ class IncidentPage(BaseModel):
 
 class ImportResult(BaseModel):
     imported: int
+    skipped: int = 0
     source_type: str = "synthetic"
