@@ -32,3 +32,10 @@
 
 .incident-form-error{margin:0 24px 4px;padding:12px 14px;background:#452835;border:1px solid #96596a;border-radius:8px;color:#ffdce3;line-height:1.6;font-size:14px}
 @media(max-width:520px){.incident-form-error{margin:0 16px 4px}}
+
+/* The zone is an automatically suggested demo label, never an official boundary. */
+.incident-picker-zone{display:grid;gap:3px;padding:7px 11px;background:#173b36;border-radius:7px;color:#dff4e8;font-size:13px}
+.incident-picker-zone strong{font:700 14px inherit;color:#f0fffa}
+.incident-picker-zone small{font-size:12px;line-height:1.4;color:#b2dcd1}
+.incident-zone-disclaimer{font-size:12px;font-weight:400;color:#b4c9e1;line-height:1.55}
+@media(max-width:600px){.incident-picker-zone{flex:1 1 100%}}
