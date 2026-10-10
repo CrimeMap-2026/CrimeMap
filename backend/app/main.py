@@ -17,6 +17,7 @@ from .models import Incident
 from .analytics import router as analytics_router
 from .hotspots import router as hotspots_router
 from .operations import router as operations_router
+from .prevention import router as prevention_router
 from .auth import router as auth_router, require_permission, check_request_origin
 from .schemas import Category, ImportResult, IncidentCreate, IncidentPage, IncidentPatch, IncidentRead, Status
 
@@ -34,6 +35,7 @@ app = FastAPI(title="CrimeMap API", version="0.1.0", lifespan=lifespan)
 app.include_router(analytics_router)
 app.include_router(hotspots_router)
 app.include_router(operations_router)
+app.include_router(prevention_router)
 app.include_router(auth_router)
 
 
