@@ -83,7 +83,7 @@ The map also offers links to official Puducherry Police directory/statistics and
 - FastAPI REST API for incident create, read, list/filter, status update, and deletion.
 - CSV/JSON import with strict record validation. A rejected row aborts the entire import.
 - SQLAlchemy storage with SQLite by default and PostgreSQL support via `DATABASE_URL`.
-- React/Vite incident-management screen with filters, pagination, **click-and-drag map location picker inside Add Incident**, import, and status updates. Click a map location to place the draggable pin; coordinates are populated automatically rather than entered manually. A keyboard-accessible **Use map center** option is included, and saving requires a selected location.
+- React/Vite incident-management screen with filters, pagination, **click-and-drag map location picker inside Add Incident**, import, and status updates. Placing, dragging, or centering the pin automatically fills latitude/longitude **and suggests a fictional Demo Zone A–D** based on the nearest demo reference point within 3.5 km. You can manually override the zone; moving/clearing the pin clears outdated zone values. Outside the demo reference area, no zone is guessed. **This is a prototype heuristic, not an official police-station or administrative boundary lookup.** A keyboard-accessible **Use map center** option is included, and saving requires a selected location.
 - A 100-record synthetic dataset (original 36 plus 64 new fictional samples), with an idempotent seed script.
 - API tests for CRUD, UTC conversion, field validation, atomic imports, filters, and pagination.
 
