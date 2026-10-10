@@ -1,4 +1,4 @@
-# CrimeMap — Three Workspaces: Incidents, Geospatial Intelligence & Analytics
+# CrimeMap — Four Workspaces: Incidents, Geospatial Intelligence, Analytics & Prevention
 
 A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intelligence, Analytics & Decision-Support System**. This version is **for local development only**.
 
@@ -36,6 +36,17 @@ CrimeMap now requires an account to use its API and UI. There are four backend-e
 **First run:** in `backend/`, after activating the Python environment, execute `python -m app.bootstrap_admin` and choose your own password. No default admin accounts or credentials are included. Then launch FastAPI and Vite and sign in. Administrators can create other users through **User management**.
 
 **Development-only security:** Do not expose the project to the internet or import real law-enforcement records. See [AUTHORIZATION.md](AUTHORIZATION.md) for the permissions matrix, setup instructions, technical details, and requirements before any operational deployment.
+
+## Module 04 — Prevention & Action Planner
+
+CrimeMap now has a distinct **Prevention planner** page that addresses the "Prevent" part of the hackathon statement without confusing it with an automated crime-prediction model.
+
+- Explore **descriptive observations** grouped by demonstration zone and crime category, with an optional date range. Cards show exact fictional incident counts, the selected share, and two category-specific general safeguarding measures.
+- Example prevention options: home/vehicle security awareness, cyber-fraud literacy, victim support information, lighting and maintenance assessments, and voluntary community safety education.
+- Officers and Administrators can **create and track prevention action plans** with a coordinator, due date, rationale/evidence snapshot, progress notes and status transitions; Analysts can view/export but cannot modify proposals.
+- Use **Print summary** for a presentation-ready printable overview or export the saved plan board as CSV.
+- All plan and analytics endpoints enforce permissions in FastAPI; plans are persisted in a new SQLAlchemy table. Existing accounts and incident records remain unchanged.
+- These are synthetic demonstration proposals for human review — **not verified risk predictions, patrol instructions or proven reductions in crime**. See [MODULE04.md](MODULE04.md) for presentation instructions and limitations.
 
 ## Module 03 — Crime Analytics Dashboard
 
@@ -85,7 +96,7 @@ uvicorn app.main:app --reload --port 8000
 
 The API is at `http://127.0.0.1:8000` and the Swagger documentation is at `http://127.0.0.1:8000/docs`.
 
-SQLite is **already a database**: `crimemap.db` is created in `backend/` on startup, alongside account and session tables. Existing incident records and administrator accounts are preserved when pulling new code.
+SQLite is **already a database**: `crimemap.db` is created in `backend/` on startup, alongside account, session and prevention-action tables. Existing incident records and administrator accounts are preserved when pulling new code.
 
 To fill any missing demonstration records (including the 64 new records), stop at least any simultaneous seed process and run from `backend/`:
 
