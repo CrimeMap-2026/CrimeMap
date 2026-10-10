@@ -53,3 +53,9 @@ td { font-size: 14px; color: #cedbeb; }
   h1 { font-size: 25px; }
   .sidebar button.nav-item { font-size: 13px; }
 }
+
+/* A single Locate on Map action in the existing incident registry. */
+.incident-locate-action{min-height:34px;padding:7px 10px;font-size:12px;white-space:nowrap}
+.incident-locate-action svg{flex-shrink:0}
+.incident-locate-action:focus-visible{outline:2px solid #8dcbff;outline-offset:2px}
+@media(max-width:640px){.incident-locate-action{min-height:38px}}
