@@ -10,7 +10,8 @@ CrimeMap now includes a dedicated **Prevention planner** page to address the hac
 4. Explain a measure in human terms. Examples include vehicle-security awareness, community property-security education, digital scam prevention, better visibility/lighting maintenance reviews, and victim-support referrals.
 5. If logged in as an **Officer** or **Administrator**, click **Create action plan**, assign a fictional coordinator, optional due date, and review/evaluation notes. This saves a record in the local database.
 6. In the **Prevention action board**, advance the status: Proposed → In progress → Completed (or Cancelled). Edit the responsible coordinator, due date or progress notes separately.
-7. Click **Print summary** to use the browser's Print to PDF capability, or **Export plans** to download a CSV with the tracked proposals.
+7. For a **completed** plan, choose **Review observed counts** to compare fictional incident counts across two ordered, equal-length calendar windows for the plan's saved category and demonstration zone. The example date windows are September 1–10 and October 1–10, 2026 (both 10 days), and can be edited. The view displays both counts, an absolute difference and a percentage only when the earlier count is nonzero. Analysts can review but not edit plans.
+8. Click **Print summary** to use the browser's Print to PDF capability, or **Export plans** to download a CSV with the tracked proposals.
 
 A completed example plan documents that an activity was marked completed, **not** that the activity reduced crime.
 
@@ -20,6 +21,7 @@ A completed example plan documents that an activity was marked completed, **not*
 | --- | --- | --- | --- | --- |
 | Open prevention page and view observations | No | Yes | Yes | Yes |
 | View saved plans and print/export summary | No | Yes | Yes | Yes |
+| Review earlier/later fictional incident counts for completed plans | No | Yes | Yes | Yes |
 | Create plans from category/zone suggestions | No | No | Yes | Yes |
 | Update statuses, owners, due dates, notes | No | No | Yes | Yes |
 
@@ -31,6 +33,7 @@ FastAPI enforces each permission independently of React. Every saved plan record
 - `GET /api/prevention/plans` — up to 200 most recent saved plans. Requires Analyst or higher.
 - `POST /api/prevention/plans` — create a plan after the server rechecks the incident count for its zone/category/date selection; derives title, action and rationale server-side rather than trusting browser-supplied evidence. Requires Officer or Administrator.
 - `PATCH /api/prevention/plans/{id}` — update status (with checked transitions), owner, due date, or progress notes. Requires Officer or Administrator.
+- `GET /api/prevention/plans/{id}/review?previous_start_date=YYYY-MM-DD&previous_end_date=YYYY-MM-DD&followup_start_date=YYYY-MM-DD&followup_end_date=YYYY-MM-DD` — read-only, equal-duration count comparison for a completed plan. Requires Analyst or higher. Same SQL filters and inclusive IST boundaries as other prevention summaries. Maximum 366 days per window; windows must be ordered and non-overlapping. Does not write any outcome or add a new database table.
 
 New `prevention_plans` SQLAlchemy table is added automatically when FastAPI starts, on the selected SQLite/PostgreSQL connection. Existing `incidents`, `users` and `login_sessions` data is **not wiped or reseeded**.
 
@@ -41,7 +44,7 @@ New `prevention_plans` SQLAlchemy table is added automatically when FastAPI star
 - Suggestions are fixed, category-specific general guidance, **not** generated patrol routes, automatic officer assignments, surveillance targets, or a dispatch tool.
 - Demonstration zones are fabricated names; verified locality information and authoritative data would be required before real deployment.
 - Proposals require a human decision and consideration of accessibility, privacy, proportionality and community input.
-- Outcome evaluation and any causal claims would require suitable validated records and well-designed studies; merely ticking a plan "completed" is not evidence of impact.
+- **Review observed counts** is not a scientifically valid outcome evaluation: the selected windows are *not* bound to actual implementation/completion dates, and there is no untreated comparison group, exposure denominator, underreporting adjustment or statistical significance analysis. Changes in fictional counts cannot be attributed to preventive measures. Merely ticking "completed" remains only an activity status.
 - This prototype still needs production-grade audit trails, migrations, robust identity management and an independent security review before handling real police or citizen information.
 
 ## Run
