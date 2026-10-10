@@ -46,7 +46,15 @@ def parse_rows(rows: Sequence[dict], *, collect_errors: bool):
                 raise HTTPException(422, detail=error)
             invalid.append({"row": row_number, "status": "invalid", "errors": [error["error"]]})
             continue
-        normalized = {key: (val if val != "" else None) for key, val in raw.items()}
+        # Shipped seed-data CSVs include stable DEMO-xxxx identifiers.
+        # Those identifiers belong to the seed script, not the public create API.
+        # Accept the optional import-only 'id' as metadata, but NEVER trust or
+        # persist it: new imports receive server-generated UUIDs as before.
+        # Every other unexpected field remains forbidden by IncidentCreate.
+        normalized = {
+            key: (val if val != "" else None)
+            for key, val in raw.items() if key != "id"
+        }
         try:
             item = IncidentCreate.model_validate(normalized)
         except ValidationError as exc:
