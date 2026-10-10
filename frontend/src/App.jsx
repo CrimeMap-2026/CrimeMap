@@ -7,6 +7,7 @@ import { CATEGORIES, STATUSES, changeStatus, changeOwnPassword, createIncident, 
 import Login from './modules/auth/Login.jsx';
 import './modules/auth/auth.css';
 import CrimeMap from './modules/map/CrimeMap.jsx';
+import IncidentLocationPicker, { validIncidentPosition } from './modules/incidents/IncidentLocationPicker.jsx';
 
 const AnalyticsDashboard = lazy(() => import('./modules/analytics/AnalyticsDashboard.jsx'));
 const Users = lazy(() => import('./modules/auth/Users.jsx'));
@@ -22,7 +23,7 @@ function initialForm() {
   const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
     .toISOString().slice(0, 16);
   return {
-    category: 'Theft', occurred_at: localTime, latitude: '11.9345', longitude: '79.8302',
+    category: 'Theft', occurred_at: localTime, latitude: null, longitude: null,
     police_station: '', description: '', status: 'reported',
   };
 }
@@ -49,6 +50,7 @@ function App() {
   const [filters, setFilters] = useState(initialFilters);
   const [data, setData] = useState({ items: [], total: 0, limit: 10, offset: 0 });
   const [form, setForm] = useState(initialForm);
+  const [formError, setFormError] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -130,22 +132,28 @@ function App() {
 
   async function submitIncident(event) {
     event.preventDefault();
+    if (!validIncidentPosition(form.latitude, form.longitude)) {
+      setFormError('Choose a location by placing a pin on the map before saving.');
+      return;
+    }
+    setFormError('');
     setBusy(true);
     try {
       await createIncident({
         ...form,
         occurred_at: new Date(form.occurred_at).toISOString(),
-        latitude: Number(form.latitude),
-        longitude: Number(form.longitude),
+        latitude: form.latitude,
+        longitude: form.longitude,
         police_station: form.police_station || null,
         description: form.description || null,
       });
       feedback('success', 'Synthetic incident added successfully.');
       setIsOpen(false);
       setForm(initialForm());
+      setFormError('');
       setRefresh((value) => value + 1);
     } catch (error) {
-      feedback('error', error.message);
+      setFormError(error.message);
     } finally {
       setBusy(false);
     }
@@ -216,7 +224,7 @@ function App() {
           {view === 'users' && isAdmin ? <Suspense fallback={<div className="panel empty" role="status">Loading user management…</div>}><Users currentUser={user} /></Suspense> : view === 'prevention' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">Loading synthetic prevention planner…</div>}><Prevention canWrite={canWrite} refresh={refresh} /></Suspense> : view === 'analytics' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} canAnalyze={canAnalyze} /> : <>
           <div className="heading-row">
             <div><div className="eyebrow">MODULE 01 · INCIDENT MANAGEMENT</div><h1>Crime incident records</h1><p className="intro">Manage location-based incident data for mapping and analysis.</p></div>
-            {canWrite && <button className="button primary" onClick={() => setIsOpen(true)}><Plus size={17} /> Add incident</button>}
+            {canWrite && <button className="button primary" onClick={() => { setFormError(''); setIsOpen(true); }}><Plus size={17} /> Add incident</button>}
           </div>
 
           <div className="demo-warning"><AlertCircle size={19} /><div><strong>Synthetic demonstration data</strong><span>These records are generated for development and testing. They do not represent real crimes or police reports in Puducherry.</span></div></div>
@@ -255,14 +263,28 @@ function App() {
         </div>
       </main>
 
-      {isOpen && canWrite && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setIsOpen(false); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="modal-heading"><div><div className="eyebrow">SYNTHETIC INCIDENT</div><h2 id="form-title">Add a record</h2></div><button className="icon-button" disabled={busy} aria-label="Close form" onClick={() => setIsOpen(false)}><X size={20} /></button></div><form onSubmit={submitIncident}>
+      {isOpen && canWrite && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setIsOpen(false); }}><div className="modal incident-entry-modal" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="modal-heading"><div><div className="eyebrow">SYNTHETIC INCIDENT</div><h2 id="form-title">Add a record</h2></div><button className="icon-button" disabled={busy} aria-label="Close form" onClick={() => setIsOpen(false)}><X size={20} /></button></div><form onSubmit={submitIncident}>
         <div className="modal-fields"><label>Crime category<select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label>Date and time (your local time)<input type="datetime-local" required value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })} /></label>
-        <div className="form-grid"><label>Latitude<input type="number" step="any" min="-90" max="90" required value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} /></label><label>Longitude<input type="number" step="any" min="-180" max="180" required value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} /></label></div>
+        <IncidentLocationPicker
+          latitude={form.latitude} longitude={form.longitude} disabled={busy}
+          onChange={({ latitude, longitude }) => {
+            setForm(previous => ({ ...previous, latitude, longitude }));
+            setFormError('');
+          }}
+        />
         <label>Demonstration zone (optional)<input type="text" maxLength={120} placeholder="e.g. Demo Zone A" value={form.police_station} onChange={(e) => setForm({ ...form, police_station: e.target.value })} /></label>
         <label>Notes (optional)<textarea rows={3} maxLength={2000} placeholder="Synthetic test description…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
         <label>Status<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        </div><div className="modal-footer"><button type="button" className="button subtle" disabled={busy} onClick={() => setIsOpen(false)}>Cancel</button><button className="button primary" disabled={busy} type="submit"><Plus size={17} /> {busy ? 'Saving…' : 'Create record'}</button></div></form></div></div>}
+        </div>
+        {formError && <div className="incident-form-error" role="alert">{formError}</div>}
+        <div className="modal-footer">
+          <button type="button" className="button subtle" disabled={busy} onClick={() => setIsOpen(false)}>Cancel</button>
+          <button className="button primary" disabled={busy || !validIncidentPosition(form.latitude, form.longitude)} type="submit">
+            <Plus size={17} /> {busy ? 'Saving…' : 'Create record'}
+          </button>
+        </div>
+      </form></div></div>}
       {accountOpen && <div className="auth-account-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !passwordBusy) setAccountOpen(false); }}>
         <section className="auth-account-panel" role="dialog" aria-modal="true" aria-labelledby="password-heading">
           <h2 id="password-heading">Change your password</h2>
