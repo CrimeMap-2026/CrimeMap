@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CircleUserRound, KeyRound, Plus, RefreshCw, ShieldCheck } from 'lucide-react';
 import { addUser, listUsers, modifyUser, resetUserPassword } from '../../api';
 import AuditTrail from './AuditTrail.jsx';
+import { useDialogFocus } from '../../hooks/useDialogFocus.js';
 import './auth.css';
 
 const ROLES = ['viewer', 'analyst', 'officer', 'admin'];
@@ -21,6 +22,7 @@ export default function Users({ currentUser }) {
   const [form, setForm] = useState({ username: '', password: '', role: 'viewer' });
   const [resetFor, setResetFor] = useState(null);
   const [resetPassword, setResetPassword] = useState('');
+  const passwordDialogRef = useDialogFocus(Boolean(resetFor), () => setResetFor(null), Boolean(workingId));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,7 +90,7 @@ export default function Users({ currentUser }) {
     <div className="demo-warning"><ShieldCheck size={18} /><div><strong>Development access only</strong>
       <span>These are local accounts for synthetic CrimeMap data. An operational deployment requires HTTPS, centralized identity, independent audit storage and a full security review.</span>
     </div></div>
-    {notice && <div className={'notice ' + (notice.error ? 'error' : '')} role="status">{notice.text}</div>}
+    {notice && <div className={'notice ' + (notice.error ? 'error' : '')} role={notice.error ? 'alert' : 'status'}>{notice.text}</div>}
     <div className="user-admin-layout">
       <section className="panel users-create">
         <div className="panel-heading"><div><h2>Create account</h2><p>No publicly accessible registration.</p></div><Plus size={20} /></div>
@@ -131,7 +133,7 @@ export default function Users({ currentUser }) {
     </div>
     <AuditTrail />
     {resetFor && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !workingId) setResetFor(null); }}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+      <div ref={passwordDialogRef} tabIndex={-1} className="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title">
         <div className="modal-heading"><h2 id="reset-title">Reset password for {resetFor.username}</h2></div>
         <form onSubmit={changePassword}>
           <div className="modal-fields"><label>New password<input type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={resetPassword}
