@@ -109,6 +109,144 @@ Uploaded CSV/JSON is synthetic only: up to **1,000 rows / 2 MB**, with timezone-
 
 **Never use this prototype with real police, victim, witness or operational information.** Before production, obtain authorization and introduce data governance, HTTPS, MFA/SSO, independently protected audit logs, retention controls, backups, vulnerability reviews, and verified geographic boundary data.
 
+## Google Cloud Run + Cloud SQL deployment (synthetic demo only)
+
+**Use this only for fictional hackathon records.** The Cloud Run image builds the React frontend and serves it from FastAPI on one HTTPS hostname. The runtime requires Cloud SQL PostgreSQL; it fails on missing settings and cannot silently write to temporary SQLite. `start.py` remains the **local development launcher**, not the Cloud Run container command. The Cloud Run service creates no users or seed incidents at startup.
+
+The steps below use **Google Cloud Shell (Bash)**, not Fedora/Fish or Windows PowerShell. They **create billable resources**; review the current Cloud SQL instance estimate and set a budget alert before continuing. Cloud SQL runs and charges while provisioned, even if Cloud Run scales to zero. A budget alert is **not a spending cap**.
+
+### 1. Project and managed PostgreSQL
+
+In [Google Cloud Console](https://console.cloud.google.com/), choose a project with your activated trial billing account. Open [Cloud Shell](https://console.cloud.google.com/?cloudshell=true):
+
+```bash
+export PROJECT_ID="YOUR_PROJECT_ID"
+export REGION="asia-south1"
+gcloud config set project "$PROJECT_ID"
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com sqladmin.googleapis.com secretmanager.googleapis.com
+```
+
+In **Cloud SQL → Create instance → PostgreSQL**:
+
+- Select the **same Mumbai (`asia-south1`) region**, **Enterprise edition**, a small single-zone/shared-core development configuration (check what the console actually offers and its hourly/monthly estimate), and an instance ID such as `crimemap-db`. Avoid Enterprise Plus and high-availability replicas for a short-lived demo.
+- Create database `crimemap` and a dedicated SQL user `crimemap_app` with a long random password. Save the password privately. The managed **Cloud SQL connector** handles Cloud Run ↔ Cloud SQL traffic; do not add public authorized networks for the application.
+- In Cloud Shell, retrieve the connection name (substitute your actual instance ID):
+
+```bash
+export INSTANCE_ID="crimemap-db"
+export CONNECTION="$(gcloud sql instances describe "$INSTANCE_ID" --format='value(connectionName)')"
+echo "$CONNECTION"
+```
+
+Cloud SQL is a **separate database**. It does not copy your local `backend/crimemap.db`, local admin account or extra CSV imports. Do **not** delete or modify that local file.
+
+### 2. Separate secrets and minimal runtime identity
+
+Use Secret Manager so SQL passwords are never placed in GitHub, Dockerfiles or plain deployment command arguments. In Cloud Shell, create these **two different** secrets. The admin secret is for the **one-time initialization job only**:
+
+```bash
+read -rsp "Cloud SQL crimemap_app password: " DB_PASSWORD; echo
+printf '%s' "$DB_PASSWORD" | gcloud secrets create crimemap-db-password --data-file=-
+unset DB_PASSWORD
+
+read -rsp "New cloud admin password (12-128 chars): " ADMIN_PASSWORD; echo
+printf '%s' "$ADMIN_PASSWORD" | gcloud secrets create crimemap-admin-password --data-file=-
+unset ADMIN_PASSWORD
+
+gcloud iam service-accounts create crimemap-runtime \
+  --display-name="CrimeMap demonstration runtime"
+export SERVICE_ACCOUNT="crimemap-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" --role="roles/cloudsql.client"
+for NAME in crimemap-db-password crimemap-admin-password; do
+  gcloud secrets add-iam-policy-binding "$NAME" \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/secretmanager.secretAccessor"
+done
+```
+
+If the Cloud Shell console already contains one of those resources from a prior attempt, **do not overwrite an existing secret/account** blindly; inspect and reuse the intended identity or create a fresh unique name.
+
+### 3. Build once, initialize a fresh database explicitly
+
+In Cloud Shell, clone the repo's tested branch:
+
+```bash
+git clone --branch dev/shwetha https://github.com/aeroslayys/CrimeMap.git
+cd CrimeMap
+
+gcloud artifacts repositories create crimemap \
+  --repository-format=docker --location="$REGION" \
+  --description="CrimeMap demonstration images"
+
+export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/crimemap/crimemap:demo"
+gcloud builds submit --tag "$IMAGE" .
+```
+
+The root `Dockerfile` compiles React, installs the backend, includes only synthetic fixture files, and launches Uvicorn on Cloud Run's `PORT`. The `.dockerignore` excludes `.env`, SQLite files, virtual environments, local dependencies, and secrets.
+
+**For a new empty Cloud SQL database only**, run an explicit one-time initializer job. It creates the first cloud administrator **only if no users exist**, and `--seed` adds only missing canonical `DEMO-` fixture IDs. Neither action is performed on every web-server start.
+
+```bash
+gcloud run jobs create crimemap-init \
+  --image="$IMAGE" --region="$REGION" --service-account="$SERVICE_ACCOUNT" \
+  --set-cloudsql-instances="$CONNECTION" \
+  --set-env-vars="CLOUD_SQL_CONNECTION_NAME=$CONNECTION,DB_NAME=crimemap,DB_USER=crimemap_app,CRIMEMAP_INITIAL_ADMIN_USERNAME=demo-admin" \
+  --set-secrets="DB_PASS=crimemap-db-password:latest,CRIMEMAP_INITIAL_ADMIN_PASSWORD=crimemap-admin-password:latest" \
+  --command=python --args=-m,scripts.cloud_init,--seed \
+  --max-retries=0
+
+gcloud run jobs execute crimemap-init --region="$REGION" --wait
+```
+
+Check the job completed successfully in the Cloud Run console before deploying the web service. If the job fails, inspect its logs; **do not reset the Cloud SQL database**. After confirming cloud admin login, delete this one-time job and remove the unused admin-password secret/permissions if you no longer need them.
+
+### 4. Deploy the web service privately at first
+
+```bash
+gcloud run deploy crimemap \
+  --image="$IMAGE" --region="$REGION" \
+  --service-account="$SERVICE_ACCOUNT" \
+  --add-cloudsql-instances="$CONNECTION" \
+  --set-env-vars="CLOUD_SQL_CONNECTION_NAME=$CONNECTION,DB_NAME=crimemap,DB_USER=crimemap_app" \
+  --set-secrets="DB_PASS=crimemap-db-password:latest" \
+  --min-instances=0 --max-instances=2 --concurrency=20 \
+  --memory=1Gi --port=8080 \
+  --invoker-iam-check
+```
+
+Cloud Run starts behind an **IAM invoker check** initially. Once the application and account setup are reviewed for **synthetic-only demo sharing**, you may explicitly allow anyone to reach the landing page:
+
+```bash
+gcloud run services update crimemap --region="$REGION" --no-invoker-iam-check
+gcloud run services describe crimemap --region="$REGION" \
+  --format='value(status.url)'
+```
+
+**Warning:** Disabling Cloud Run IAM makes the URL publicly accessible on the internet, even though CrimeMap still requires its own username/password for incident and analytics APIs. This project's authentication, audit, data governance and rate-limiting are **development-grade**, not independently security-reviewed for public/real police data. Use strong unique demo passwords, limit who receives admin access, and make the service private again after team testing:
+
+```bash
+gcloud run services update crimemap --region="$REGION" --invoker-iam-check
+```
+
+The service uses **Secure, HttpOnly, SameSite=Strict session cookies** and HTTPS-only matching-host request origins in Cloud Run mode. Build settings are intentionally separate from localhost Vite configuration, so no external CORS origin is required.
+
+### 5. Test persistence and control costs
+
+On the Cloud Run HTTPS URL:
+
+1. Sign in with the **new cloud admin credentials**; confirm the seeded fictional 100 incidents appear. Your original local account and any additional local CSV imports remain **local**.
+2. Import a few distinct **fictional** CSV records. Refresh and sign out/in; verify they persist.
+3. Export a presentation PDF, check geospatial maps, analytics and prevention plans.
+4. Redeploy or allow Cloud Run to scale down, then return and confirm the imported records still exist in **Cloud SQL**.
+5. Create separate least-privilege Viewer/Analyst/Officer test accounts in **User management** and avoid giving teammates the cloud admin password.
+
+Configure a billing **budget alert** for the trial project. Delete or stop unnecessary Cloud SQL resources and switch the web service back to IAM-protected when the testing period ends; otherwise Cloud SQL continues billing. A trial balance is not a guarantee that arbitrary usage is free.
+
+Useful official references: [Cloud Run containers](https://docs.cloud.google.com/run/docs/configuring/services/containers), [Cloud SQL connection](https://docs.cloud.google.com/sql/docs/postgres/connect-run), [Secret Manager integration](https://docs.cloud.google.com/run/docs/configuring/services/secrets), and [public vs private Cloud Run](https://docs.cloud.google.com/run/docs/authenticating/public).
+
 ## Tests and useful endpoints
 
 ```fish
