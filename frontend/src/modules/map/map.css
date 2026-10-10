@@ -179,3 +179,15 @@
   .grid-view-switch{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid-view-switch button{font-size:13px;padding:10px}
 }
+
+/* Focused registry record on the shared map; no second map or layer mode. */
+.map-focus-banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:#263425;border:1px solid #84743b;border-radius:9px;
+  padding:14px 16px;margin-bottom:15px;color:#f5e5ad}
+.map-focus-banner>svg{color:#f5d67d;flex-shrink:0}
+.map-focus-banner>div{display:grid;gap:4px;flex:1;min-width:180px}
+.map-focus-banner strong{font-size:14px;overflow-wrap:anywhere}
+.map-focus-banner span{font-size:13px;line-height:1.6;color:#e2d4a6}
+.map-focus-banner .button{color:#ffedc2;background:#3e3b2c;border:1px solid #78693e}
+.map-focus-banner .button:focus-visible{outline:2px solid #f5d67d;outline-offset:3px}
+@media(max-width:520px){.map-focus-banner .button{flex:1 1 100%}}
