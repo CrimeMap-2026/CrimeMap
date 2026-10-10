@@ -50,6 +50,7 @@ CrimeMap now has a distinct **Prevention planner** page that addresses the "Prev
 - Explore **descriptive observations** grouped by demonstration zone and crime category, with an optional date range. Cards show exact fictional incident counts, the selected share, and two category-specific general safeguarding measures.
 - Example prevention options: home/vehicle security awareness, cyber-fraud literacy, victim support information, lighting and maintenance assessments, and voluntary community safety education.
 - Officers and Administrators can **create and track prevention action plans** with a coordinator, due date, rationale/evidence snapshot, progress notes and status transitions; Analysts can view/export but cannot modify proposals.
+- A **Review observed counts** button on completed plans shows an equal-duration earlier/later fictional incident comparison for the saved zone/category. The period selection is explicit and can include newly CSV-imported records. This is **not** a verified prevention-effectiveness measure: periods are manually chosen, not tied to activity dates, and count changes cannot be attributed to the plan.
 - Use **Print summary** for a presentation-ready printable overview or export the saved plan board as CSV.
 - All plan and analytics endpoints enforce permissions in FastAPI; plans are persisted in a new SQLAlchemy table. Existing accounts and incident records remain unchanged.
 - These are synthetic demonstration proposals for human review — **not verified risk predictions, patrol instructions or proven reductions in crime**. See [MODULE04.md](MODULE04.md) for presentation instructions and limitations.
@@ -180,6 +181,7 @@ For demonstration safety, the API **always** sets `source_type` to `synthetic`, 
 | GET | `/api/hotspots/grid` | Synthetic grid-cell counts, ranks, bounds, and GeoJSON features |
 | GET | `/api/hotspots/compare` | Synthetic before/after grid counts in identical cells (Analyst or higher) |
 | GET | `/api/admin/audit` | Administrator-only paginated change history for synthetic incidents and prevention plans |
+| GET | `/api/prevention/plans/{id}/review` | Read-only equal-length fictional incident count comparison for a completed plan (Analyst or higher) |
 | GET | `/api/operations/overview` | Static fictional CCTV, accident and patrol track overlays for Module 02 |
 
 ## Folder structure
