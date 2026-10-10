@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Crosshair, MapPin, RotateCcw } from 'lucide-react';
-import { validIncidentPosition } from './location-utils.js';
+import { suggestDemoZone, validIncidentPosition } from './location-utils.js';
 export { validIncidentPosition } from './location-utils.js';
 import './incident-location.css';
 
@@ -16,7 +16,7 @@ const PIN_ICON = L.divIcon({
   iconAnchor: [15, 34],
 });
 
-export default function IncidentLocationPicker({ latitude, longitude, onChange, disabled = false }) {
+export default function IncidentLocationPicker({ latitude, longitude, zone = '', onChange, disabled = false }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
@@ -24,6 +24,8 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
   const latestCallback = useRef(onChange);
   const latestDisabled = useRef(disabled);
   const selected = validIncidentPosition(latitude, longitude);
+  const suggestedZone = selected ? suggestDemoZone(latitude, longitude) : '';
+  const zoneWasEdited = selected && zone !== suggestedZone;
 
   useEffect(() => { latestCallback.current = onChange; }, [onChange]);
   useEffect(() => { latestDisabled.current = disabled; }, [disabled]);
@@ -120,7 +122,7 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
   return <div className="incident-picker" aria-label="Choose incident location">
     <div className="incident-picker-heading">
       <div className="incident-picker-label"><MapPin size={18} /><strong>Incident location <span aria-hidden="true">*</span></strong></div>
-      <p>Click or tap the map to place a pin, then <strong>drag the pin</strong> to fine-tune its location.</p>
+      <p>Click or tap the map to place a pin, then <strong>drag the pin</strong> to fine-tune its location. The fictional zone suggestion updates when the pin moves.</p>
     </div>
     <div className="incident-picker-map" ref={containerRef}
       aria-label="Interactive OpenStreetMap. Click to place the incident marker; drag it to adjust." />
@@ -137,6 +139,10 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
       {selected ? <>
         <MapPin size={17} />
         <span>Selected: <strong>Lat {latitude.toFixed(6)}, Lon {longitude.toFixed(6)}</strong></span>
+        <span className="incident-picker-zone">
+          Zone: <strong>{zone || 'Not assigned'}</strong>
+          <small>{zoneWasEdited ? 'Manual value' : suggestedZone ? 'Suggested from the nearest fictional reference point' : 'No nearby demonstration-zone reference'}</small>
+        </span>
         <button type="button" disabled={disabled} onClick={() => onChange({ latitude: null, longitude: null })}>
           Clear pin
         </button>
@@ -147,7 +153,7 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
     </div>
     <p className="incident-picker-hint">
       Keyboard: focus the map and use arrow keys to pan, then choose <strong>Use map center</strong>.
-      Use +/− to zoom. Coordinates are recorded automatically and remain synthetic demonstration data.
+      Use +/− to zoom. Coordinates and a nearby fictional zone are suggested automatically. The zone is not a verified police-station boundary.
     </p>
   </div>;
 }
