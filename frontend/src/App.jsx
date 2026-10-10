@@ -218,11 +218,13 @@ function App() {
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="logo"><span className="logo-symbol"><MapPinned size={22} /></span><span>Crime<span className="accent">Map</span><small>INTELLIGENCE PLATFORM</small></span></div>
         <div className="nav-title">WORKSPACE</div>
-        <button type="button" className={`nav-item ${view === 'incidents' ? 'selected' : ''}`} onClick={() => setView('incidents')}><Database size={17} /> Incidents <span className="nav-current">01</span></button>
-        <button type="button" className={`nav-item ${view === 'map' ? 'selected' : ''}`} onClick={() => { setMapFocus(null); setView('map'); }}><MapPinned size={17} /> Geospatial intelligence <span className="nav-current">02</span></button>
+        <nav className="workspace-nav" aria-label="Workspaces">
+        <button type="button" aria-current={view === 'incidents' ? 'page' : undefined} className={`nav-item ${view === 'incidents' ? 'selected' : ''}`} onClick={() => setView('incidents')}><Database size={17} /> Incidents <span className="nav-current">01</span></button>
+        <button type="button" aria-current={view === 'map' ? 'page' : undefined} className={`nav-item ${view === 'map' ? 'selected' : ''}`} onClick={() => { setMapFocus(null); setView('map'); }}><MapPinned size={17} /> Geospatial intelligence <span className="nav-current">02</span></button>
         {canAnalyze && <button type="button" className={`nav-item ${view === 'analytics' ? 'selected' : ''}`} aria-current={view === 'analytics' ? 'page' : undefined} onClick={() => setView('analytics')}><LayoutDashboard size={17} /> Analytics <span className="nav-current">03</span></button>}
         {canAnalyze && <button type="button" className={`nav-item ${view === 'prevention' ? 'selected' : ''}`} aria-current={view === 'prevention' ? 'page' : undefined} onClick={() => setView('prevention')}><HeartHandshake size={17} /> Prevention planner <span className="nav-current">04</span></button>}
         {isAdmin && <button type="button" className={`nav-item ${view === 'users' ? 'selected' : ''}`} aria-current={view === 'users' ? 'page' : undefined} onClick={() => setView('users')}><UsersRound size={17} /> User management <span className="nav-current">ADM</span></button>}
+        </nav>
         <div className="sidebar-bottom"><ShieldCheck size={17} /><span>{user.username}<small>{user.role} · Synthetic development data</small></span></div>
       </aside>
 
