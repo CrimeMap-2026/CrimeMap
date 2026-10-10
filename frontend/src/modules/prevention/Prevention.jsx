@@ -7,6 +7,7 @@ import {
   CATEGORIES, createPreventionPlan, fetchAnalyticsFilters,
   fetchPreventionInsights, fetchPreventionPlans, updatePreventionPlan,
 } from '../../api';
+import PreventionCountReview from './PreventionCountReview.jsx';
 import './prevention.css';
 
 const INITIAL_FILTERS = { zone: '', category: '', start_date: '', end_date: '' };
@@ -54,7 +55,7 @@ function exportPlanCsv(plans) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function PlanCard({ plan, canWrite, saving, onStatus, onEdit }) {
+function PlanCard({ plan, canWrite, saving, onStatus, onEdit, onReview }) {
   return <article className="prevention-plan">
     <div className="prevent-plan-heading">
       <span className={'prevent-status prevent-status-' + plan.status}>{LABELS[plan.status]}</span>
@@ -69,13 +70,16 @@ function PlanCard({ plan, canWrite, saving, onStatus, onEdit }) {
       <div><dt>Created (UTC)</dt><dd>{plan.created_at.slice(0, 16).replace('T', ' ')}</dd></div>
     </dl>
     {plan.notes && <p className="prevent-notes">Notes: {plan.notes}</p>}
-    {canWrite && <div className="prevent-plan-actions">
-      {TRANSITIONS[plan.status].map(status => <button type="button" className="button subtle"
+    {(canWrite || plan.status === 'completed') && <div className="prevent-plan-actions">
+      {canWrite && TRANSITIONS[plan.status].map(status => <button type="button" className="button subtle"
         key={status} disabled={saving} onClick={() => onStatus(plan, status)}>
         {status === 'completed' && <CheckCircle2 size={15} />}
         {status === 'in_progress' ? 'Start action' : status === 'completed' ? 'Mark completed' : 'Cancel plan'}
       </button>)}
-      <button type="button" className="button subtle" disabled={saving} onClick={() => onEdit(plan)}>Edit details</button>
+      {canWrite && <button type="button" className="button subtle" disabled={saving} onClick={() => onEdit(plan)}>Edit details</button>}
+      {plan.status === 'completed' && <button type="button" className="button outline" onClick={() => onReview(plan)}>
+        <CalendarDays size={15}/> Review observed counts
+      </button>}
     </div>}
   </article>;
 }
@@ -95,6 +99,7 @@ export default function Prevention({ canWrite = false, refresh = 0 }) {
   const [planRefresh, setPlanRefresh] = useState(0);
   const [createDraft, setCreateDraft] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
+  const [reviewPlan, setReviewPlan] = useState(null);
   const [working, setWorking] = useState(false);
   const [updating, setUpdating] = useState('');
 
@@ -293,7 +298,10 @@ export default function Prevention({ canWrite = false, refresh = 0 }) {
       {!loadingPlans && !!plans.length && <div className="prevention-board">{plans.map(plan => <PlanCard
         key={plan.id} plan={plan} canWrite={canWrite} saving={updating === plan.id}
         onStatus={changeStatus} onEdit={value => setEditDraft({ ...value, due_date: value.due_date || '', notes: value.notes || '' })}
+        onReview={plan => setReviewPlan(plan)}
       />)}</div>}
+      {reviewPlan && <PreventionCountReview key={reviewPlan.id} plan={reviewPlan}
+        onClose={() => setReviewPlan(null)}/>}
     </section>
 
     <footer className="prevention-footnote"><ShieldCheck size={17}/> Decision support is advisory. Use authorized data, equity and privacy review, community consultation and appropriate outcome evaluation before implementing real-world measures.</footer>
