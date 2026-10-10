@@ -163,3 +163,19 @@
   .ops-timeline-title span{margin-left:0;width:100%}
   .ops-controls{padding:15px}
 }
+
+
+/* Period-to-period comparison lives inside Grid Analysis, not a separate map. */
+.grid-view-switch{display:inline-flex;gap:5px;flex-wrap:wrap;padding:5px;margin-bottom:14px;border-radius:10px;background:#162539;border:1px solid #39516b}
+.grid-view-switch button{border:0;border-radius:7px;background:transparent;color:#b6cee7;font-size:14px;padding:11px 15px;min-height:43px;cursor:pointer;font-weight:600}
+.grid-view-switch button.active{background:#2d5b85;color:#fff}
+.grid-compare-filters{align-items:end}
+.grid-compare-section-name{flex-basis:100%;font-size:14px;color:#d5e5f9;font-weight:700;padding-top:5px;border-top:1px solid #32465e}
+.grid-compare-section-name:first-child{border:0;padding-top:0}
+.grid-compare-item .grid-cell-top strong{font-size:13px}
+.grid-compare-counts{font-size:14px;color:#e4effc}
+.grid-compare-counts b{color:#bcd6f5}
+@media (max-width:600px){
+  .grid-view-switch{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-view-switch button{font-size:13px;padding:10px}
+}
