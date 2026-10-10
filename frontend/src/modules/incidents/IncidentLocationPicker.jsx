@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Crosshair, MapPin, RotateCcw } from 'lucide-react';
+import { validIncidentPosition } from './location-utils.js';
+export { validIncidentPosition } from './location-utils.js';
 import './incident-location.css';
 
 // The same Leaflet/OpenStreetMap stack used by Geospatial Intelligence.
@@ -13,13 +15,6 @@ const PIN_ICON = L.divIcon({
   iconSize: [30, 38],
   iconAnchor: [15, 34],
 });
-
-export function validIncidentPosition(latitude, longitude) {
-  return typeof latitude === 'number' && Number.isFinite(latitude) &&
-    typeof longitude === 'number' && Number.isFinite(longitude) &&
-    latitude >= -90 && latitude <= 90 &&
-    longitude >= -180 && longitude <= 180;
-}
 
 export default function IncidentLocationPicker({ latitude, longitude, onChange, disabled = false }) {
   const containerRef = useRef(null);
@@ -141,7 +136,7 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
       role="status" aria-live="polite">
       {selected ? <>
         <MapPin size={17} />
-        <span>Selected: <strong>{latitude.toFixed(6)}° N, {longitude.toFixed(6)}° E</strong></span>
+        <span>Selected: <strong>Lat {latitude.toFixed(6)}, Lon {longitude.toFixed(6)}</strong></span>
         <button type="button" disabled={disabled} onClick={() => onChange({ latitude: null, longitude: null })}>
           Clear pin
         </button>
