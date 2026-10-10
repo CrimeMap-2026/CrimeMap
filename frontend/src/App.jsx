@@ -76,6 +76,7 @@ function App() {
   useEffect(() => {
     const sessionExpired = () => {
       setUser(null);
+      setMapFocus(null);
       setIsOpen(false);
       setAccountOpen(false);
       setView('incidents');
@@ -103,6 +104,7 @@ function App() {
       await signOut();
     } finally {
       setUser(null);
+      setMapFocus(null);
       setIsOpen(false);
       setAccountOpen(false);
       setView('incidents');
@@ -119,6 +121,7 @@ function App() {
       setNewPassword('');
       setAccountOpen(false);
       setUser(null); // Password changes revoke active sessions server-side.
+      setMapFocus(null);
     } catch (reason) {
       setAccountError(reason.message);
     } finally {
@@ -208,7 +211,7 @@ function App() {
   }
 
   if (authLoading) return <div className="auth-loading" role="status">Checking CrimeMap session…</div>;
-  if (!user) return <Login onLogin={profile => { setUser(profile); setView('incidents'); setRefresh(n => n + 1); }} />;
+  if (!user) return <Login onLogin={profile => { setUser(profile); setMapFocus(null); setView('incidents'); setRefresh(n => n + 1); }} />;
 
   return (
     <div className="app-shell">
