@@ -12,6 +12,7 @@ import {
   CompareSidebar, ComparisonLegend, COMPARISON_COLORS, COMPARISON_LABELS,
   DEFAULT_COMPARISON, GridCompareForm,
 } from './GridComparison.jsx';
+import { focusedIncidentFeature } from './incident-focus.js';
 import './map.css';
 
 const DEFAULT_GRID = { start_date: '', end_date: '', zone: '', cell_size_m: '1000', min_count: '3' };
@@ -107,7 +108,7 @@ function buildPopup(feature) {
   return root;
 }
 
-export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
+export default function CrimeMap({ refresh = 0, canAnalyze = false, focusIncident = null, onClearFocus }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const markerRefs = useRef(new Map());
@@ -176,6 +177,36 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
       mapRef.current = null;
     };
   }, []);
+
+  // Registry navigation uses the already mounted Leaflet map; no duplicate
+  // map, untrusted URL parameters, or extra backend endpoint required.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusIncident) return;
+    // Old filters may have hidden the chosen record. Select normal markers.
+    setCategory('');
+    setStatus('');
+    setLayer('markers');
+    map.setView([focusIncident.latitude, focusIncident.longitude], 16, { animate: false });
+
+    // A separate non-interactive halo guarantees the selected position remains
+    // identifiable even if the viewport marker query is truncated or clustered.
+    const halo = L.circleMarker(
+      [focusIncident.latitude, focusIncident.longitude],
+      { radius: 20, color: '#f5d67d', weight: 4, opacity: 1,
+        fillColor: '#f5d67d', fillOpacity: 0.12, interactive: false },
+    ).addTo(map);
+    // Reuse the exact sanitized DOM popup from ordinary map markers.
+    const popup = L.popup({ maxWidth: 310 })
+      .setLatLng([focusIncident.latitude, focusIncident.longitude])
+      .setContent(buildPopup(focusedIncidentFeature(focusIncident)))
+      .openOn(map);
+
+    return () => {
+      if (map.hasLayer(halo)) map.removeLayer(halo);
+      if (map.hasLayer(popup)) map.removeLayer(popup);
+    };
+  }, [focusIncident]);
 
   useEffect(() => {
     if (!bounds || layer === 'grid' || (layer === 'operations' && !opsLayers.incidents)) return;
@@ -433,6 +464,7 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
     setOpsLayers({ ...DEFAULT_OPERATION_LAYERS });
     if (operations) setOpsStep(Math.max(0, operations.timeline.steps - 1));
     setSelectedOperationIncident(null);
+    onClearFocus?.();
     mapRef.current?.setView(CENTER, 13);
   }
 
@@ -508,19 +540,26 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
         </div>
         <div className="map-layer-switch" role="group" aria-label="Map display mode">
           <button type="button" className={layer === 'markers' ? 'active' : ''} aria-pressed={layer === 'markers'} onClick={() => setLayer('markers')}><MapPinned size={16} /> Markers</button>
-          <button type="button" className={layer === 'heatmap' ? 'active' : ''} aria-pressed={layer === 'heatmap'} onClick={() => setLayer('heatmap')}><Layers size={17} /> Heatmap</button>
-          {canAnalyze && <button type="button" className={layer === 'grid' ? 'active' : ''} aria-pressed={layer === 'grid'} onClick={() => setLayer('grid')}><Grid2X2 size={17} /> Grid analysis</button>}
-          <button type="button" className={layer === 'operations' ? 'active' : ''} aria-pressed={layer === 'operations'} onClick={() => setLayer('operations')}><RadioTower size={17} /> Operations</button>
+          <button type="button" className={layer === 'heatmap' ? 'active' : ''} aria-pressed={layer === 'heatmap'} onClick={() => { onClearFocus?.(); setLayer('heatmap'); }}><Layers size={17} /> Heatmap</button>
+          {canAnalyze && <button type="button" className={layer === 'grid' ? 'active' : ''} aria-pressed={layer === 'grid'} onClick={() => { onClearFocus?.(); setLayer('grid'); }}><Grid2X2 size={17} /> Grid analysis</button>}
+          <button type="button" className={layer === 'operations' ? 'active' : ''} aria-pressed={layer === 'operations'} onClick={() => { onClearFocus?.(); setLayer('operations'); }}><RadioTower size={17} /> Operations</button>
         </div>
       </div>
       <div className="demo-warning"><ShieldAlert size={19} /><div><strong>Demonstration map — synthetic incidents only</strong><span>All locations and reports shown here are fictional. Heatmaps and grids describe fictional concentrations. Operational overlays use simulated assets and history, not actual GPS or CCTV feeds.</span></div></div>
+      {focusIncident && <div className="map-focus-banner" role="status">
+        <MapPinned size={20} />
+        <div><strong>Located incident: {focusIncident.category} · {focusIncident.id.startsWith('DEMO-') ? focusIncident.id : focusIncident.id.slice(0, 8)}</strong>
+          <span>The map is centered on this fictional record. The gold ring highlights its location, even in a dense cluster.</span>
+        </div>
+        <button type="button" className="button subtle" onClick={() => onClearFocus?.()}>Clear selection</button>
+      </div>}
       <section className="map-toolbar" aria-label="Crime map filters">
         <span className="map-filter-label"><SlidersHorizontal size={16} /> Filters</span>
-        <select aria-label="Crime category" value={category} onChange={e => setCategory(e.target.value)}>
+        <select aria-label="Crime category" value={category} onChange={e => { onClearFocus?.(); setCategory(e.target.value); }}>
           <option value="">All categories</option>
           {CATEGORIES.map(value => <option key={value}>{value}</option>)}
         </select>
-        <select aria-label="Incident status" value={status} onChange={e => setStatus(e.target.value)}>
+        <select aria-label="Incident status" value={status} onChange={e => { onClearFocus?.(); setStatus(e.target.value); }}>
           <option value="">All statuses</option>
           {STATUSES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
         </select>
