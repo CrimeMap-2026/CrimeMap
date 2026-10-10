@@ -4,6 +4,12 @@ A module-by-module prototype for **Problem Statement 02: Geospatial Crime Intell
 
 > **Data warning:** Every bundled incident is **synthetic**. The coordinates, incident types, zones, and timestamps were invented to test application behavior. They do **not** describe real Puducherry crimes. Do not use this build for operational policing or public crime claims.
 
+## Final UI polish and five-minute hackathon demo
+
+The existing workspaces remain unchanged. The narrow-screen workspace navigation now uses a horizontally scrollable rail; the import picker has a keyboard-operable button; and key dialogs trap keyboard focus, close on Escape when idle and return focus to their opener. The incident registry also exposes an inline load-error retry and automatically moves to a valid previous page after the last item on the current page is deleted. **No new page, database table or reseeding is required.**
+
+The ready-to-present workflow and a **manual cross-device/accessibility checklist** are in [HACKATHON_DEMO.md](HACKATHON_DEMO.md). Automated tests validate code and API behavior; visual/keyboard testing on physical devices still needs a manual run.
+
 ## One-command development launcher (Fedora / Fish)
 
 Once you've installed the backend Python environment and frontend npm dependencies, start **both FastAPI and Vite** in one terminal from the repository root:
