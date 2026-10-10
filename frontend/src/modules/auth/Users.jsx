@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CircleUserRound, KeyRound, Plus, RefreshCw, ShieldCheck } from 'lucide-react';
 import { addUser, listUsers, modifyUser, resetUserPassword } from '../../api';
+import AuditTrail from './AuditTrail.jsx';
 import './auth.css';
 
 const ROLES = ['viewer', 'analyst', 'officer', 'admin'];
@@ -85,7 +86,7 @@ export default function Users({ currentUser }) {
       </button>
     </div>
     <div className="demo-warning"><ShieldCheck size={18} /><div><strong>Development access only</strong>
-      <span>These are local accounts for synthetic CrimeMap data. An operational deployment requires HTTPS, centralized identity, auditing and a full security review.</span>
+      <span>These are local accounts for synthetic CrimeMap data. An operational deployment requires HTTPS, centralized identity, independent audit storage and a full security review.</span>
     </div></div>
     {notice && <div className={'notice ' + (notice.error ? 'error' : '')} role="status">{notice.text}</div>}
     <div className="user-admin-layout">
@@ -128,6 +129,7 @@ export default function Users({ currentUser }) {
         </div>}
       </section>
     </div>
+    <AuditTrail />
     {resetFor && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !workingId) setResetFor(null); }}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title">
         <div className="modal-heading"><h2 id="reset-title">Reset password for {resetFor.username}</h2></div>
