@@ -6,8 +6,12 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { Crosshair, Download, Grid2X2, Layers, MapPinned, RotateCcw, ShieldAlert, SlidersHorizontal, RadioTower } from 'lucide-react';
-import { CATEGORIES, STATUSES, fetchAnalyticsFilters, fetchHotspots, fetchMapIncidents, fetchOperations } from '../../api';
+import { CATEGORIES, STATUSES, fetchAnalyticsFilters, fetchHotspots, fetchGridComparison, fetchMapIncidents, fetchOperations } from '../../api';
 import { DEFAULT_OPERATION_LAYERS, drawOperationalLayers, OperationsControls, OperationsResults } from './OperationalMode.jsx';
+import {
+  CompareSidebar, ComparisonLegend, COMPARISON_COLORS, COMPARISON_LABELS,
+  DEFAULT_COMPARISON, GridCompareForm,
+} from './GridComparison.jsx';
 import './map.css';
 
 const DEFAULT_GRID = { start_date: '', end_date: '', zone: '', cell_size_m: '1000', min_count: '3' };
@@ -30,6 +34,26 @@ function cellPopup(properties) {
     const item = document.createElement('div');
     item.textContent = line;
     root.append(item);
+  }
+  return root;
+}
+
+function comparisonPopup(properties) {
+  const root = document.createElement('div');
+  root.className = 'crime-popup';
+  const heading = document.createElement('strong');
+  heading.textContent = 'Compared cell ' + properties.cell_id;
+  root.append(heading);
+  for (const message of [
+    COMPARISON_LABELS[properties.classification],
+    'Previous: ' + count(properties.previous_count) + ' fictional incidents',
+    'Current: ' + count(properties.current_count) + ' fictional incidents',
+    'Count change: ' + (properties.change > 0 ? '+' : '') + properties.change,
+    'Descriptive counts only. No forecast or crime-risk estimate.',
+  ]) {
+    const line = document.createElement('div');
+    line.textContent = message;
+    root.append(line);
   }
   return root;
 }
@@ -98,6 +122,14 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
   const [collection, setCollection] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [gridView, setGridView] = useState('single');
+  const [comparisonDraft, setComparisonDraft] = useState(DEFAULT_COMPARISON);
+  const [comparisonApplied, setComparisonApplied] = useState(DEFAULT_COMPARISON);
+  const [comparisonData, setComparisonData] = useState(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState('');
+  const [comparisonValidation, setComparisonValidation] = useState('');
+  const [comparisonRetry, setComparisonRetry] = useState(0);
   const [gridDraft, setGridDraft] = useState(DEFAULT_GRID);
   const [gridApplied, setGridApplied] = useState(DEFAULT_GRID);
   const [gridData, setGridData] = useState(null);
@@ -108,6 +140,8 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
   const [gridRetry, setGridRetry] = useState(0);
   const [selectedCell, setSelectedCell] = useState(null);
   const gridPending = JSON.stringify(gridDraft) !== JSON.stringify(gridApplied);
+  const comparisonPending = JSON.stringify(comparisonDraft) !== JSON.stringify(comparisonApplied);
+  const activeGridData = gridView === 'compare' ? comparisonData : gridData;
   const [operations, setOperations] = useState(null);
   const [opsLoading, setOpsLoading] = useState(false);
   const [opsError, setOpsError] = useState('');
@@ -173,7 +207,7 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
   }, [layer, gridOptions]);
 
   useEffect(() => {
-    if (layer !== 'grid') return;
+    if (layer !== 'grid' || gridView !== 'single') return;
     const controller = new AbortController();
     setGridLoading(true);
     setGridError('');
@@ -196,7 +230,36 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
         }
       });
     return () => controller.abort();
-  }, [layer, gridApplied, category, status, refresh, gridRetry]);
+  }, [layer, gridView, gridApplied, category, status, refresh, gridRetry]);
+
+  useEffect(() => {
+    if (layer !== 'grid' || gridView !== 'compare') return;
+    const controller = new AbortController();
+    setComparisonLoading(true);
+    setComparisonError('');
+    setComparisonData(null);
+    setSelectedCell(null);
+    const query = { ...comparisonApplied, category, status };
+    if (comparisonApplied.zone) {
+      const zone = JSON.parse(comparisonApplied.zone);
+      query.zone = zone ?? '';
+      if (zone === null) query.unspecified_zone = 'true';
+    }
+    fetchGridComparison(query, controller.signal)
+      .then(data => {
+        if (!controller.signal.aborted) {
+          setComparisonData(data);
+          setComparisonLoading(false);
+        }
+      })
+      .catch(reason => {
+        if (!controller.signal.aborted) {
+          setComparisonError(reason.message || 'Period comparison could not be loaded.');
+          setComparisonLoading(false);
+        }
+      });
+    return () => controller.abort();
+  }, [layer, gridView, comparisonApplied, category, status, refresh, comparisonRetry]);
 
   useEffect(() => {
     if (layer !== 'operations' || operations) return;
@@ -238,20 +301,20 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
       };
     }
     if (layer === 'grid') {
-      if (!gridData) return;
-      const { south, west, north, east } = gridData.meta.study_bounds;
+      if (!activeGridData) return;
+      const { south, west, north, east } = activeGridData.meta.study_bounds;
       const boundary = L.rectangle([[south, west], [north, east]], {
         color: '#7691b1', weight: 1.5, dashArray: '7 6', fill: false, interactive: false,
       }).addTo(map);
-      const polygons = L.geoJSON(gridData, {
+      const polygons = L.geoJSON(activeGridData, {
         style: feature => ({
-          color: colorForCount(feature.properties.count),
+          color: gridView === 'compare' ? COMPARISON_COLORS[feature.properties.classification] : colorForCount(feature.properties.count),
           weight: 2,
           fillOpacity: 0.48,
         }),
         onEachFeature(feature, shape) {
           cellLayers.current.set(feature.properties.cell_id, shape);
-          shape.bindPopup(cellPopup(feature.properties));
+          shape.bindPopup(gridView === 'compare' ? comparisonPopup(feature.properties) : cellPopup(feature.properties));
           shape.on('click', () => setSelectedCell(feature.properties.cell_id));
         },
       }).addTo(map);
@@ -302,17 +365,17 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
       markerRefs.current.clear();
       clusterRef.current = null;
     };
-  }, [collection, layer, gridData, operations, opsLayers, opsStep]);
+  }, [collection, layer, activeGridData, gridView, operations, opsLayers, opsStep]);
 
   useEffect(() => {
-    if (layer !== 'grid' || !gridData) return;
+    if (layer !== 'grid' || !activeGridData) return;
     const cells = gridLayerRef.current;
     const map = mapRef.current;
     if (!cells || !map) return;
     const bounds = cells.getBounds();
     if (bounds.isValid()) map.fitBounds(bounds, { padding: [45, 45], maxZoom: 14, animate: false });
     else map.setView(CENTER, 12, { animate: false });
-  }, [gridData, layer]);
+  }, [activeGridData, layer]);
 
   useEffect(() => {
     if (layer !== 'grid' || !gridLayerRef.current) return;
@@ -325,7 +388,7 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
       mapRef.current.fitBounds(shape.getBounds(), { padding: [45, 45], maxZoom: 15, animate: false });
       shape.openPopup();
     }
-  }, [selectedCell, gridData, layer]);
+  }, [selectedCell, activeGridData, layer]);
 
   const latest = useMemo(() => collection.features.slice(0, 8), [collection]);
 
@@ -359,6 +422,10 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
   function resetMap() {
     setCategory('');
     setStatus('');
+    setGridView('single');
+    setComparisonDraft({ ...DEFAULT_COMPARISON });
+    setComparisonApplied({ ...DEFAULT_COMPARISON });
+    setComparisonValidation('');
     setGridDraft({ ...DEFAULT_GRID });
     setGridApplied({ ...DEFAULT_GRID });
     setGridValidation('');
@@ -384,6 +451,31 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
     setGridApplied({ ...gridDraft });
   }
 
+  function applyComparison(event) {
+    event.preventDefault();
+    const d = comparisonDraft;
+    if (![d.previous_start_date, d.previous_end_date, d.current_start_date, d.current_end_date].every(Boolean)) {
+      setComparisonValidation('Choose all four dates.');
+      return;
+    }
+    const previousDays = Math.round((Date.parse(d.previous_end_date + 'T00:00:00Z') -
+      Date.parse(d.previous_start_date + 'T00:00:00Z')) / 86400000) + 1;
+    const currentDays = Math.round((Date.parse(d.current_end_date + 'T00:00:00Z') -
+      Date.parse(d.current_start_date + 'T00:00:00Z')) / 86400000) + 1;
+    if (previousDays <= 0 || currentDays <= 0 ||
+        d.previous_end_date >= d.current_start_date || previousDays !== currentDays || previousDays > 366) {
+      setComparisonValidation('Choose earlier and later non-overlapping periods with equal durations (1–366 days each).');
+      return;
+    }
+    const min = Number(d.min_count);
+    if (!Number.isInteger(min) || min < 2 || min > 1000) {
+      setComparisonValidation('Minimum incidents per cell must be an integer from 2 to 1,000.');
+      return;
+    }
+    setComparisonValidation('');
+    setComparisonApplied({ ...d });
+  }
+
   function fitGrid() {
     const shapes = gridLayerRef.current;
     if (shapes?.getBounds().isValid()) {
@@ -393,14 +485,15 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
   }
 
   function downloadGrid() {
-    if (!gridData) return;
+    if (!activeGridData) return;
+    const applied = gridView === 'compare' ? comparisonApplied : gridApplied;
     const blob = new Blob([JSON.stringify({
-      ...gridData, applied_filters: { ...gridApplied, category, status },
+      ...activeGridData, applied_filters: { ...applied, category, status },
     }, null, 2)], { type: 'application/geo+json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'crimemap-synthetic-grid.geojson';
+    link.download = gridView === 'compare' ? 'crimemap-synthetic-period-comparison.geojson' : 'crimemap-synthetic-grid.geojson';
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -434,7 +527,20 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
         <button type="button" className="button subtle" onClick={resetMap}><RotateCcw size={15} /> Reset map</button>
       </section>
 
-      {layer === 'grid' && <form className="panel grid-filters" onSubmit={applyGrid} aria-label="Grid analysis filters" noValidate>
+      {layer === 'grid' && <div className="grid-view-switch" role="group" aria-label="Grid analysis display">
+        <button type="button" aria-pressed={gridView === 'single'}
+          className={gridView === 'single' ? 'active' : ''}
+          onClick={() => { setSelectedCell(null); setGridView('single'); }}>Single period</button>
+        <button type="button" aria-pressed={gridView === 'compare'}
+          className={gridView === 'compare' ? 'active' : ''}
+          onClick={() => { setSelectedCell(null); setGridView('compare'); }}>Compare periods</button>
+      </div>}
+      {layer === 'grid' && gridView === 'compare' && <GridCompareForm
+        draft={comparisonDraft} setDraft={setComparisonDraft} onSubmit={applyComparison}
+        onReset={() => { setComparisonDraft({ ...DEFAULT_COMPARISON }); setComparisonApplied({ ...DEFAULT_COMPARISON }); setComparisonValidation(''); }}
+        options={gridOptions} pending={comparisonPending} validation={comparisonValidation}
+      />}
+      {layer === 'grid' && gridView === 'single' && <form className="panel grid-filters" onSubmit={applyGrid} aria-label="Grid analysis filters" noValidate>
         <div className="grid-field"><label htmlFor="grid-start">From date (IST)</label><input id="grid-start" type="date" value={gridDraft.start_date} onChange={e => setGridDraft(d => ({ ...d, start_date: e.target.value }))} /></div>
         <div className="grid-field"><label htmlFor="grid-end">To date (IST)</label><input id="grid-end" type="date" value={gridDraft.end_date} onChange={e => setGridDraft(d => ({ ...d, end_date: e.target.value }))} /></div>
         <div className="grid-field"><label htmlFor="grid-zone">Demonstration zone</label><select id="grid-zone" value={gridDraft.zone} onChange={e => setGridDraft(d => ({ ...d, zone: e.target.value }))}>
@@ -450,7 +556,7 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
           <button type="submit" className="button primary"><SlidersHorizontal size={17} /> Apply grid filters</button>
           <button type="button" className="button subtle" onClick={() => { setGridDraft({ ...DEFAULT_GRID }); setGridApplied({ ...DEFAULT_GRID }); setGridValidation(''); }}>Clear grid filters</button>
         </div>
-        <p className="grid-help">Category and status above apply to all three modes. Dates and zone filter grid results only. Grid counts use a fixed study extent, regardless of map panning.</p>
+        <p className="grid-help">Category and status above apply to all visualization modes. Dates and zone filter single-period grid results only. Grid counts use a fixed study extent, regardless of map panning.</p>
         {gridPending && <p className="grid-pending" role="status">You have unapplied grid filter changes.</p>}
         {gridValidation && <p className="grid-error" role="alert">{gridValidation}</p>}
       </form>}
@@ -464,24 +570,31 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
           <div className="map-canvas" ref={mapContainer} aria-label="Interactive map centered on Puducherry" />
           <div className="map-overlay-count" role="status">
             {layer === 'grid'
-              ? gridLoading ? 'Computing grid counts…' : gridError ? 'Grid analysis unavailable' : gridData ? count(gridData.meta.qualifying_cells) + ' cells meet the threshold' : 'Choose grid filters'
+              ? gridView === 'compare'
+                  ? comparisonLoading ? 'Comparing synthetic periods…' : comparisonError ? 'Comparison unavailable' : comparisonData ? count(comparisonData.meta.displayed_cells) + ' cells changed classification' : 'Choose comparison periods'
+                  : gridLoading ? 'Computing grid counts…' : gridError ? 'Grid analysis unavailable' : gridData ? count(gridData.meta.qualifying_cells) + ' cells meet the threshold' : 'Choose grid filters'
               : layer === 'operations' ? opsLoading ? 'Loading simulated assets…' : opsError ? 'Demo operations unavailable' : 'SIMULATED ASSETS · NOT LIVE'
               : loading ? 'Loading visible reports…' : error ? 'Map data unavailable' : `${collection.meta.returned} of ${collection.meta.total} incidents in view`}
           </div>
           <div className="map-legend" aria-label="Map legend">
-            <strong>{layer === 'grid' ? 'Synthetic incidents per cell' : layer === 'operations' ? 'Fictional operational layers' : layer === 'heatmap' ? 'Synthetic point density' : 'Incident categories'}</strong>
+            <strong>{layer === 'grid' ? gridView === 'compare' ? 'Fixed-grid period comparison' : 'Synthetic incidents per cell' : layer === 'operations' ? 'Fictional operational layers' : layer === 'heatmap' ? 'Synthetic point density' : 'Incident categories'}</strong>
             {layer === 'operations' ? <div className="ops-map-legend">
               <span><i style={{ background: '#e39b80' }} /> Crime incidents</span>
               <span><i style={{ background: '#5bc7ce' }} /> CCTV assets</span>
               <span><i style={{ background: '#edb760' }} /> Road accidents</span>
               <span><i style={{ background: '#70b8ff' }} /> Demo patrols</span>
               <small>Illustrative locations only. Not a live monitoring map.</small>
-            </div> : layer === 'grid' ? <div className="grid-legend"><span><i style={{ background: colorForCount(1) }} /> 1–4</span><span><i style={{ background: colorForCount(5) }} /> 5–9</span><span><i style={{ background: colorForCount(10) }} /> 10+</span><small>Only cells meeting the count threshold are displayed. No risk estimate.</small></div> : layer === 'heatmap' ? <span>Brighter areas contain more demonstration points. No risk estimate.</span> :
+            </div> : layer === 'grid' && gridView === 'compare' ? <ComparisonLegend /> : layer === 'grid' ? <div className="grid-legend"><span><i style={{ background: colorForCount(1) }} /> 1–4</span><span><i style={{ background: colorForCount(5) }} /> 5–9</span><span><i style={{ background: colorForCount(10) }} /> 10+</span><small>Only cells meeting the count threshold are displayed. No risk estimate.</small></div> : layer === 'heatmap' ? <span>Brighter areas contain more demonstration points. No risk estimate.</span> :
               <div className="legend-grid">{CATEGORIES.map(value => <span key={value}><i className={`legend-dot cat-${CATEGORY_KEYS[value]}`} />{value}</span>)}</div>}
           </div>
         </div>
         <aside className="map-results" aria-label={layer === 'grid' ? 'Ranked grid cells' : layer === 'operations' ? 'Simulated operational assets' : 'Incidents in current map view'}>
-          {layer === 'grid' ? <>
+          {layer === 'grid' ? (gridView === 'compare' ? <CompareSidebar
+            data={comparisonData} loading={comparisonLoading} error={comparisonError}
+            selectedCell={selectedCell} onSelectCell={setSelectedCell}
+            onFit={fitGrid} onDownload={downloadGrid}
+            onRetry={() => setComparisonRetry(n => n + 1)}
+          /> : <>
             <div className="map-results-heading"><h2>Grid concentration</h2><span>{gridData?.meta.qualifying_cells ?? '—'}</span></div>
             <p>Ranked grid cells describe synthetic incident counts, not crime risk.</p>
             <div className="grid-side-actions">
@@ -507,7 +620,7 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
                 </button>)}
               </div>
             </>}
-          </> : layer === 'operations' ? <OperationsResults
+          </>) : layer === 'operations' ? <OperationsResults
             data={operations} loading={opsLoading} error={opsError}
             layers={opsLayers} step={opsStep} collection={collection}
             selectedIncident={selectedOperationIncident} onLocate={locateDemoUnit}
@@ -531,8 +644,8 @@ export default function CrimeMap({ refresh = 0, canAnalyze = false }) {
       </section>
       {layer === 'grid' && <details className="panel grid-method">
         <summary>How grid analysis works</summary>
-        <p>Each matching incident within a fixed rectangular demonstration study extent is assigned to one square grid cell. Cells meeting the minimum count are highlighted and ranked (equal counts share a rank). Counts are computed server-side across all matching records, not merely those currently visible on the map.</p>
-        <p>Cell width, alignment, time period and filters affect the counts. Density uses nominal cell area without adjusting for population, exposure or reporting rates. These are not statistically validated hotspots or predictions.</p>
+        <p>Each matching incident within a fixed rectangular demonstration study extent is assigned to one square grid cell. Period comparison uses those exact same cells for both windows, with equal calendar durations. Cells meeting the minimum count are highlighted and ranked (equal counts share a rank). Counts are computed server-side across all matching records, not merely those currently visible on the map.</p>
+        <p>Cell width, alignment, time period and filters affect the counts. Density uses nominal cell area without adjusting for population, exposure or reporting rates. These are not statistically validated hotspots or predictions. An increase or decrease is not evidence of risk changes or preventive effectiveness.</p>
         <p>The rectangular extent is not an official administrative boundary. No highlighted cell does not mean an area is safe.</p>
       </details>}
       <details className="panel geo-references">
