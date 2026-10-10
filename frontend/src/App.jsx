@@ -11,6 +11,7 @@ import { incidentMapFocus } from './modules/map/incident-focus.js';
 import IncidentLocationPicker, { validIncidentPosition } from './modules/incidents/IncidentLocationPicker.jsx';
 import { locationFieldsForPin } from './modules/incidents/location-utils.js';
 import ImportPreview from './modules/incidents/ImportPreview.jsx';
+import { useDialogFocus } from './hooks/useDialogFocus.js';
 
 const AnalyticsDashboard = lazy(() => import('./modules/analytics/AnalyticsDashboard.jsx'));
 const Users = lazy(() => import('./modules/auth/Users.jsx'));
@@ -64,6 +65,8 @@ function App() {
   const canWrite = Boolean(user && WRITE_ROLES.includes(user.role));
   const canDelete = user?.role === 'admin';
   const isAdmin = user?.role === 'admin';
+  const incidentDialogRef = useDialogFocus(isOpen && canWrite, () => setIsOpen(false), busy);
+  const accountDialogRef = useDialogFocus(accountOpen, () => setAccountOpen(false), passwordBusy);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +218,7 @@ function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#crimemap-main-content">Skip to main content</a>
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="logo"><span className="logo-symbol"><MapPinned size={22} /></span><span>Crime<span className="accent">Map</span><small>INTELLIGENCE PLATFORM</small></span></div>
         <div className="nav-title">WORKSPACE</div>
@@ -228,7 +232,7 @@ function App() {
         <div className="sidebar-bottom"><ShieldCheck size={17} /><span>{user.username}<small>{user.role} · Synthetic development data</small></span></div>
       </aside>
 
-      <main className="main-area">
+      <main className="main-area" id="crimemap-main-content" tabIndex={-1}>
         <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> {view === 'map' ? 'Geospatial view' : view === 'analytics' ? 'Analysis' : view === 'prevention' ? 'Decision support' : view === 'users' ? 'Administration' : 'Data management'} <span>/</span> <strong>{view === 'map' ? 'Geospatial intelligence' : view === 'analytics' ? 'Analytics' : view === 'prevention' ? 'Prevention planner' : view === 'users' ? 'Users' : 'Incidents'}</strong></span><div className="auth-actions"><span className="auth-role-chip">{user.role}</span><button type="button" className="button subtle" onClick={() => setAccountOpen(true)}><KeyRound size={16} /> Password</button><button type="button" className="button subtle" onClick={logout}><LogOut size={16} /> Sign out</button></div></header>
         <div className="content">
           {view === 'users' && isAdmin ? <Suspense fallback={<div className="panel empty" role="status">Loading user management…</div>}><Users currentUser={user} /></Suspense> : view === 'prevention' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">Loading synthetic prevention planner…</div>}><Prevention canWrite={canWrite} refresh={refresh} /></Suspense> : view === 'analytics' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} canAnalyze={canAnalyze} focusIncident={mapFocus}
@@ -240,7 +244,7 @@ function App() {
 
           <div className="demo-warning"><AlertCircle size={19} /><div><strong>Synthetic demonstration data</strong><span>These records are generated for development and testing. They do not represent real crimes or police reports in Puducherry.</span></div></div>
 
-          {notice && <div className={`notice ${notice.type}`} role="status">{notice.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span>{notice.text}</span><button aria-label="Dismiss message" onClick={() => setNotice(null)}><X size={16} /></button></div>}
+          {notice && <div className={`notice ${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'}>{notice.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span>{notice.text}</span><button aria-label="Dismiss message" onClick={() => setNotice(null)}><X size={16} /></button></div>}
 
           <section className="stats-grid" aria-label="Incident overview">
             <div className="stat"><div className="stat-top"><span>Matching incidents</span><Database size={18} /></div><strong>{data.total}</strong><small>Records matching filters</small></div>
@@ -288,7 +292,7 @@ function App() {
         </div>
       </main>
 
-      {isOpen && canWrite && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setIsOpen(false); }}><div className="modal incident-entry-modal" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="modal-heading"><div><div className="eyebrow">SYNTHETIC INCIDENT</div><h2 id="form-title">Add a record</h2></div><button className="icon-button" disabled={busy} aria-label="Close form" onClick={() => setIsOpen(false)}><X size={20} /></button></div><form onSubmit={submitIncident}>
+      {isOpen && canWrite && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setIsOpen(false); }}><div ref={incidentDialogRef} tabIndex={-1} className="modal incident-entry-modal" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="modal-heading"><div><div className="eyebrow">SYNTHETIC INCIDENT</div><h2 id="form-title">Add a record</h2></div><button className="icon-button" disabled={busy} aria-label="Close form" onClick={() => setIsOpen(false)}><X size={20} /></button></div><form onSubmit={submitIncident}>
         <div className="modal-fields"><label>Crime category<select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label>Date and time (your local time)<input type="datetime-local" required value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })} /></label>
         <IncidentLocationPicker
@@ -311,7 +315,7 @@ function App() {
         </div>
       </form></div></div>}
       {accountOpen && <div className="auth-account-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !passwordBusy) setAccountOpen(false); }}>
-        <section className="auth-account-panel" role="dialog" aria-modal="true" aria-labelledby="password-heading">
+        <section ref={accountDialogRef} tabIndex={-1} className="auth-account-panel" role="dialog" aria-modal="true" aria-labelledby="password-heading">
           <h2 id="password-heading">Change your password</h2>
           <p>Your existing login sessions will be revoked. Sign in again with the new password.</p>
           <form className="auth-fields" onSubmit={changePassword}>
