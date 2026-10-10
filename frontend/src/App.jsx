@@ -8,6 +8,7 @@ import Login from './modules/auth/Login.jsx';
 import './modules/auth/auth.css';
 import CrimeMap from './modules/map/CrimeMap.jsx';
 import IncidentLocationPicker, { validIncidentPosition } from './modules/incidents/IncidentLocationPicker.jsx';
+import { locationFieldsForPin } from './modules/incidents/location-utils.js';
 
 const AnalyticsDashboard = lazy(() => import('./modules/analytics/AnalyticsDashboard.jsx'));
 const Users = lazy(() => import('./modules/auth/Users.jsx'));
@@ -267,13 +268,13 @@ function App() {
         <div className="modal-fields"><label>Crime category<select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label>Date and time (your local time)<input type="datetime-local" required value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })} /></label>
         <IncidentLocationPicker
-          latitude={form.latitude} longitude={form.longitude} disabled={busy}
+          latitude={form.latitude} longitude={form.longitude} zone={form.police_station} disabled={busy}
           onChange={({ latitude, longitude }) => {
-            setForm(previous => ({ ...previous, latitude, longitude }));
+            setForm(previous => locationFieldsForPin(previous, latitude, longitude));
             setFormError('');
           }}
         />
-        <label>Demonstration zone (optional)<input type="text" maxLength={120} placeholder="e.g. Demo Zone A" value={form.police_station} onChange={(e) => setForm({ ...form, police_station: e.target.value })} /></label>
+        <label>Demonstration zone (auto-suggested, editable)<input type="text" maxLength={120} placeholder="Choose a map location to suggest a demo zone" value={form.police_station} onChange={(e) => setForm({ ...form, police_station: e.target.value })} /><span className="incident-zone-disclaimer">The nearest fictional zone reference is suggested when you place or drag the pin. This is not a verified police jurisdiction. You may correct the zone manually.</span></label>
         <label>Notes (optional)<textarea rows={3} maxLength={2000} placeholder="Synthetic test description…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
         <label>Status<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         </div>
