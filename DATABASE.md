@@ -89,6 +89,14 @@ python -m uvicorn app.main:app --reload --port 8000
 
 Your existing `backend/crimemap.db` is still there. You can also simply open a fresh terminal without the PostgreSQL-specific environment variable.
 
+## Prevention planner table
+
+Module 04 adds `prevention_plans`, a new table containing human-reviewed synthetic prevention action proposals, selected measure, fictional zone/category, a count-based evidence snapshot, coordinator, notes, due date, status and creation/update timestamps. It references the creator's local user ID. Existing incidents and authorization accounts are untouched.
+
+When you start FastAPI with `python3 start.py`, the local prototype's SQLAlchemy initialization adds this missing table in the *currently selected database* (SQLite by default, PostgreSQL only if you explicitly configured `DATABASE_URL`). You do not need to wipe or re-import your 100 incidents.
+
+Run `python -m scripts.db_status` from the `backend` directory to inspect incident, account, session and prevention-plan row counts. For an operational system, replace automatic schema creation with reviewed, versioned Alembic migrations.
+
 ## Data files and behavior
 
 | Resource | Purpose |
