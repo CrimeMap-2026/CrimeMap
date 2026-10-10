@@ -38,7 +38,7 @@ test('accepts valid one-day windows and leap-day intervals', () => {
   }), '');
   assert.equal(reviewPeriodError({
     previous_start_date: '2024-01-01', previous_end_date: '2024-12-31',
-    followup_start_date: '2025-01-01', followup_end_date: '2026-01-01',
+    followup_start_date: '2025-01-01', followup_end_date: '2025-12-31',
   }), 'Choose an earlier period and a later non-overlapping period with the same length (1–366 days each).');
 });
 
