@@ -55,6 +55,23 @@ CrimeMap now has a distinct **Prevention planner** page that addresses the "Prev
 - All plan and analytics endpoints enforce permissions in FastAPI; plans are persisted in a new SQLAlchemy table. Existing accounts and incident records remain unchanged.
 - These are synthetic demonstration proposals for human review — **not verified risk predictions, patrol instructions or proven reductions in crime**. See [MODULE04.md](MODULE04.md) for presentation instructions and limitations.
 
+## One-click consolidated presentation PDF (inside Analytics)
+
+Use **Analytics → Build presentation PDF** to export a single downloadable, on-demand PDF. Choose any combination of existing **Incident analytics**, **Fixed-grid geographic findings**, and **Saved prevention plans**; adjust grid width and count threshold if geographic findings are selected. The export uses the *currently applied Analytics filters* (IST date range, category, status, and named/missing zone) and reads fresh database aggregates; there is no separate Reports page or saved reporting table.
+
+The PDF contains vector count charts, a **schematic spatial cell-location diagram** based on existing fixed-grid aggregates (not a copyrighted street-tile screenshot), plus up to 12 latest matching saved prevention plans and the count of all matching plans. Stored plans are filtered by category/zone only, not incident status/date, because plans have a separate lifecycle. No descriptions, owner/coordinator names, planning notes or incident-level coordinates are exported. Every page is labeled as synthetic demonstration material; differences in counts cannot establish safety, risk, prediction or prevention effectiveness.
+
+**Upgrade requirement:** after pulling changes, install the new server-side ReportLab PDF dependency *into your existing backend virtual environment* (do not recreate it or delete the database):
+
+```fish
+cd ~/Documents/Repos/CrimeMap-work/backend
+.venv/bin/python -m pip install -r requirements.txt
+cd ..
+python3 start.py
+```
+
+The route `GET /api/reports/presentation` requires Analyst, Officer or Administrator access and accepts the same Analytics filters plus `sections` (comma-separated `analytics,spatial,prevention`), `cell_size_m` (250–5000) and `min_count` (2–1000). The generated PDF is not stored server-side, and the existing incident and plan records are not modified.
+
 ## Module 03 — Crime Analytics Dashboard
 
 - Open **Analytics** in the existing sidebar on desktop, tablet, or mobile.
