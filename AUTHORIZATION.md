@@ -58,6 +58,14 @@ For a non-local deployment behind a trusted reverse proxy, set `CRIMEMAP_TRUSTED
 
 If your browser still reports “Cross-origin changes are not allowed” after updating the code, restart FastAPI and make sure you're opening the Vite frontend on one of the two documented local URLs. If Vite uses a different port, explicitly set the permitted origin in `CRIMEMAP_TRUSTED_ORIGINS` for development.
 
+## Administrator change history (synthetic incidents and plans)
+
+CrimeMap records **successful** incident creation, status/description updates, deletion and CSV/JSON imports, as well as prevention-plan creation and changes. Each event has a UTC timestamp, actor ID, username and role snapshot, event type, record ID when applicable, and a limited set of non-sensitive change indicators. Import batches produce one event recording the batch size.
+
+Audit entries are inserted **in the same SQL transaction** as the operation they describe. Failed or rolled-back changes produce no successful event; no-op edits are not logged. Passwords, session tokens, incident descriptions, prevention notes and coordinator names are **never copied into event details**.
+
+Only Administrators can read the paginated `GET /api/admin/audit` endpoint (optional `entity_type`, `actor_id`, `limit` and `offset` filters). The interface displays the history **inside the existing User Management page**, not in a separate navigation module. Other roles receive HTTP 403. This change history is a **local, application-level log**, not a tamper-resistant security audit trail. Existing incidents, plan revisions and account actions performed before the feature existed cannot be reconstructed, and user account changes/login attempts are not yet included. Direct database administrators could alter event records. Formal immutable logging, retention, full actor/session analysis, MFA and trusted timekeeping would be required before operational use.
+
 ## Backend enforcement
 
 - `POST /api/auth/login` — validates password and issues an **HttpOnly**, `SameSite=Strict` session cookie with an eight-hour maximum lifetime.
