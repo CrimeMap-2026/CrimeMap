@@ -187,6 +187,11 @@ export function createPreventionPlan(payload) {
   });
 }
 
+export function reviewPreventionPlan(id, periods, signal) {
+  const params = new URLSearchParams(periods);
+  return request(`/api/prevention/plans/${encodeURIComponent(id)}/review?${params}`, { signal });
+}
+
 export function updatePreventionPlan(id, payload) {
   return request(`/api/prevention/plans/${encodeURIComponent(id)}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
