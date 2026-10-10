@@ -203,12 +203,20 @@ def check_request_origin(request: Request) -> None:
 
     # Direct same-origin requests work without any configuration. The protocol
     # is validated independently to keep the proxy/HTTPS cases explicit.
-    same_host = valid_origin and parsed.netloc.lower() == host and parsed.scheme == request.url.scheme
+    # Cloud Run terminates HTTPS at Google's ingress proxy. Uvicorn receives
+    # proxied traffic; for this explicitly configured deployment, only accept
+    # HTTPS browser origins matching the external Host.
+    cloud_run = os.getenv("CRIMEMAP_DEPLOYMENT") == "cloud-run"
+    same_host = (
+        valid_origin and parsed.netloc.lower() == host
+        and (parsed.scheme == "https" if cloud_run
+             else parsed.scheme == request.url.scheme)
+    )
 
     # Loopback-only defaults for the *local* Vite server. Never accept these
     # defaults when the API's Host is a public deployment hostname.
     loopback_host = host.split(":", 1)[0] in ("127.0.0.1", "localhost", "[::1]")
-    local_vite = loopback_host and origin.lower() in (
+    local_vite = not cloud_run and loopback_host and origin.lower() in (
         "http://localhost:5173", "http://127.0.0.1:5173",
     )
 
@@ -219,7 +227,9 @@ def check_request_origin(request: Request) -> None:
         for value in os.getenv("CRIMEMAP_TRUSTED_ORIGINS", "").split(",")
         if value.strip()
     }
-    if not valid_origin or not (same_host or local_vite or origin.lower() in configured):
+    if not valid_origin or (cloud_run and parsed.scheme != "https") or not (
+        same_host or local_vite or origin.lower() in configured
+    ):
         raise HTTPException(403, "Cross-origin changes are not allowed")
 
 
@@ -243,7 +253,10 @@ def login(body: LoginBody, response: Response, request: Request, db: Annotated[S
     user.locked_until = 0
     db.commit()
     token = issue_session(db, user)
-    set_cookie(response, token, request.url.scheme == "https")
+    set_cookie(
+        response, token,
+        request.url.scheme == "https" or os.getenv("CRIMEMAP_DEPLOYMENT") == "cloud-run",
+    )
     return public_user(user)
 
 
