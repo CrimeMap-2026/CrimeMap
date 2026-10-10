@@ -42,3 +42,31 @@
 @media(max-width:1080px){.auth-actions .auth-role-chip{font-size:12px}}
 @media(max-width:850px){.user-admin-layout{grid-template-columns:1fr}.topbar{flex-wrap:wrap;height:auto;min-height:70px;padding-top:9px;padding-bottom:9px}.auth-actions{margin-left:auto}}
 @media(max-width:520px){.auth-card{padding:22px}.auth-actions{width:100%;justify-content:flex-start}.user-actions{flex-direction:column;align-items:stretch}.user-actions label{width:100%}.user-entry{padding:15px}.auth-account-panel{padding:18px}}
+
+/* Readable, admin-only audit history integrated below the existing user list. */
+.audit-section{margin-top:22px;padding-bottom:4px}
+.audit-heading{align-items:center;gap:12px;flex-wrap:wrap}
+.audit-heading h2{display:flex;align-items:center;gap:9px}
+.audit-heading p{font-size:14px;line-height:1.6;color:#b5cde6;margin-top:5px}
+.audit-heading>.button{margin-left:auto}
+.audit-toolbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:13px 20px;border-top:1px solid #2b405c}
+.audit-toolbar label{color:#d1e2f5;font-size:14px}
+.audit-toolbar select{height:42px;min-width:170px;padding:0 10px;background:#14263c;border:1px solid #3a5674;border-radius:8px;color:#e7f1ff;font-size:14px}
+.audit-toolbar>span{margin-left:auto;font-size:13px;color:#b8cde5}
+.audit-empty{padding:22px;color:#c3d6e9;font-size:14px;line-height:1.6}
+.audit-error{color:#ffbece}
+.audit-error button{margin-left:8px;background:transparent;border:1px solid #ac6376;border-radius:5px;color:inherit;padding:4px 8px}
+.audit-entry{padding:17px 20px;border-top:1px solid #2b405c;display:grid;gap:10px}
+.audit-entry-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.audit-entry-header strong{font-size:15px;color:#ebf5ff}
+.audit-entry-header time{font-size:13px;color:#a8c6e5}
+.audit-entry-meta{display:flex;gap:10px 18px;flex-wrap:wrap;font-size:13px;color:#bdd2e6}
+.audit-entry-meta b{color:#e8f1fe}
+.audit-entry-meta code{font-size:12px;color:#b0d7fe;overflow-wrap:anywhere}
+.audit-entry-details{display:flex;gap:7px;flex-wrap:wrap}
+.audit-entry-details span{font-size:12px;color:#c1d9f2;background:#1e3450;border:1px solid #31506f;padding:6px 9px;border-radius:6px;line-height:1.5}
+.audit-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 20px;border-top:1px solid #344a61;font-size:13px;color:#b4cce5;flex-wrap:wrap}
+.audit-footer>div{display:flex;gap:8px}
+.audit-footer button{font-size:13px}
+.audit-disclaimer{padding:0 20px 18px;color:#b1c4dc;font-size:12px;line-height:1.65}
+@media(max-width:540px){.audit-toolbar>span{margin-left:0;width:100%}.audit-entry{padding:14px}.audit-footer{padding:14px}.audit-footer>div{width:100%}.audit-footer button{flex:1}}
