@@ -5,6 +5,7 @@ import {
   Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { fetchAnalytics, fetchAnalyticsFilters, STATUSES } from '../../api';
+import ReportDownload from './ReportDownload.jsx';
 import './analytics.css';
 
 const INITIAL_FILTERS = { start_date: '', end_date: '', category: '', status: '', zone: '' };
@@ -120,6 +121,7 @@ export default function AnalyticsDashboard({ refresh = 0 }) {
       <button type="button" className="button subtle" onClick={() => setFilters(INITIAL_FILTERS)}>Clear filters</button>
       <p className="analytics-filter-note">Dates include the whole selected day in Asia/Kolkata (IST). Leave dates blank for all time. Every chart uses the same filters.</p>
     </section>
+    <ReportDownload filters={filters} disabled={Boolean(loading || error || invalidRange)} />
 
     <div aria-live="polite" aria-busy={loading}>
       {invalidRange && <div className="notice error" role="alert">From date must be on or before To date.</div>}
