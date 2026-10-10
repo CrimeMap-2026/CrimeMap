@@ -16,6 +16,7 @@ from .db import Base, engine, get_db
 from .models import Incident
 from .analytics import router as analytics_router
 from .hotspots import router as hotspots_router
+from .hotspot_comparison import router as hotspot_comparison_router
 from .operations import router as operations_router
 from .prevention import router as prevention_router
 from .auth import router as auth_router, require_permission, check_request_origin
@@ -34,6 +35,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="CrimeMap API", version="0.1.0", lifespan=lifespan)
 app.include_router(analytics_router)
 app.include_router(hotspots_router)
+app.include_router(hotspot_comparison_router)
 app.include_router(operations_router)
 app.include_router(prevention_router)
 app.include_router(auth_router)
