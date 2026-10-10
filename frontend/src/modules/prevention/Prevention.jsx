@@ -101,6 +101,16 @@ export default function Prevention({ canWrite = false, refresh = 0 }) {
   const [editDraft, setEditDraft] = useState(null);
   const [reviewPlan, setReviewPlan] = useState(null);
   const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    if (!reviewPlan) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById('prevention-review-heading')?.scrollIntoView({
+        behavior: 'smooth', block: 'start',
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reviewPlan]);
   const [updating, setUpdating] = useState('');
 
   useEffect(() => {
