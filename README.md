@@ -63,6 +63,7 @@ The **Geospatial Intelligence** workspace uses one Leaflet/OpenStreetMap instanc
 1. **Markers:** Individual incident points, clusters, popups and visible incident list.
 2. **Heatmap:** Descriptive density of synthetic incident points.
 3. **Grid analysis:** Backend-computed fixed-square counts, density, ranks, date/zone/threshold controls and GeoJSON export.
+   - **Compare periods (within Grid Analysis):** Compare equal-length, non-overlapping local date ranges using the same cells and threshold. Highlight fictional cells newly above threshold, above threshold in both periods, or falling below it; select cells to inspect count changes and export the comparison. This is descriptive, not crime prediction.
 4. **Operations:** Same map, with toggles for incident points, fictional road accidents, hypothetical CCTV positions and simulated patrol tracks. A timeline slider displays historical demonstration patrol snapshots; selecting a synthetic incident compares straight-line distance to the nearest fictional unit.
 
 Category and status filters apply to incident layers. Grid controls affect grid results; operational layer toggles and timeline affect Operations mode. All maps and visualizations remain clearly labelled **synthetic demonstration data**, not real public-safety intelligence, CCTV feeds, active GPS, geofencing or dispatch capabilities.
@@ -163,6 +164,7 @@ For demonstration safety, the API **always** sets `source_type` to `synthetic`, 
 | GET | `/api/analytics/overview` | Complete filtered summary and category/status/date/hour/zone aggregates |
 | GET | `/api/analytics/filters` | Category/status choices and distinct synthetic demonstration zones |
 | GET | `/api/hotspots/grid` | Synthetic grid-cell counts, ranks, bounds, and GeoJSON features |
+| GET | `/api/hotspots/compare` | Synthetic before/after grid counts in identical cells (Analyst or higher) |
 | GET | `/api/operations/overview` | Static fictional CCTV, accident and patrol track overlays for Module 02 |
 
 ## Folder structure
