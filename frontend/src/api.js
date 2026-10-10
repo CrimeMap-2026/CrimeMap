@@ -208,3 +208,35 @@ export function listAuditEvents(filters = {}, signal) {
   if (filters.actor_id) params.set('actor_id', filters.actor_id);
   return request(`/api/admin/audit?${params}`, { signal });
 }
+
+/** Download a real PDF generated from current server aggregates and saved plans. */
+export async function downloadPresentationReport(query) {
+  const params = new URLSearchParams(query);
+  let response;
+  try {
+    response = await fetch(`/api/reports/presentation?${params}`, {
+      headers: { Accept: 'application/pdf' },
+    });
+  } catch {
+    throw new Error('Cannot reach the API. Start the FastAPI server on port 8000.');
+  }
+  if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event('crimemap-session-expired'));
+    let detail;
+    try { detail = (await response.json()).detail; } catch { detail = null; }
+    throw new Error(messageFromError(detail));
+  }
+  const blob = await response.blob();
+  if (!blob.size || !response.headers.get('content-type')?.includes('application/pdf')) {
+    throw new Error('The server did not return a valid PDF.');
+  }
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = 'crimemap-synthetic-presentation.pdf';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 15000);
+  return blob.size;
+}
