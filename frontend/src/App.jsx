@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, Database, FileUp, Filter, LayoutDashboard, UsersRound, LogOut, KeyRound,
+  ArrowLeft, ArrowRight, Database, FileUp, Filter, LayoutDashboard, UsersRound, LogOut, KeyRound, HeartHandshake,
   MapPinned, Plus, Search, ShieldCheck, Trash2, X, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import { CATEGORIES, STATUSES, changeStatus, changeOwnPassword, createIncident, importIncidents, listIncidents, removeIncident, signOut, whoAmI } from './api';
@@ -10,6 +10,7 @@ import CrimeMap from './modules/map/CrimeMap.jsx';
 
 const AnalyticsDashboard = lazy(() => import('./modules/analytics/AnalyticsDashboard.jsx'));
 const Users = lazy(() => import('./modules/auth/Users.jsx'));
+const Prevention = lazy(() => import('./modules/prevention/Prevention.jsx'));
 
 const ANALYTIC_ROLES = ['analyst', 'officer', 'admin'];
 const WRITE_ROLES = ['officer', 'admin'];
@@ -204,14 +205,15 @@ function App() {
         <button type="button" className={`nav-item ${view === 'incidents' ? 'selected' : ''}`} onClick={() => setView('incidents')}><Database size={17} /> Incidents <span className="nav-current">01</span></button>
         <button type="button" className={`nav-item ${view === 'map' ? 'selected' : ''}`} onClick={() => setView('map')}><MapPinned size={17} /> Geospatial intelligence <span className="nav-current">02</span></button>
         {canAnalyze && <button type="button" className={`nav-item ${view === 'analytics' ? 'selected' : ''}`} aria-current={view === 'analytics' ? 'page' : undefined} onClick={() => setView('analytics')}><LayoutDashboard size={17} /> Analytics <span className="nav-current">03</span></button>}
+        {canAnalyze && <button type="button" className={`nav-item ${view === 'prevention' ? 'selected' : ''}`} aria-current={view === 'prevention' ? 'page' : undefined} onClick={() => setView('prevention')}><HeartHandshake size={17} /> Prevention planner <span className="nav-current">04</span></button>}
         {isAdmin && <button type="button" className={`nav-item ${view === 'users' ? 'selected' : ''}`} aria-current={view === 'users' ? 'page' : undefined} onClick={() => setView('users')}><UsersRound size={17} /> User management <span className="nav-current">ADM</span></button>}
         <div className="sidebar-bottom"><ShieldCheck size={17} /><span>{user.username}<small>{user.role} · Synthetic development data</small></span></div>
       </aside>
 
       <main className="main-area">
-        <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> {view === 'map' ? 'Geospatial view' : view === 'analytics' ? 'Analysis' : view === 'users' ? 'Administration' : 'Data management'} <span>/</span> <strong>{view === 'map' ? 'Geospatial intelligence' : view === 'analytics' ? 'Analytics' : view === 'users' ? 'Users' : 'Incidents'}</strong></span><div className="auth-actions"><span className="auth-role-chip">{user.role}</span><button type="button" className="button subtle" onClick={() => setAccountOpen(true)}><KeyRound size={16} /> Password</button><button type="button" className="button subtle" onClick={logout}><LogOut size={16} /> Sign out</button></div></header>
+        <header className="topbar"><span className="breadcrumb">CrimeMap <span>/</span> {view === 'map' ? 'Geospatial view' : view === 'analytics' ? 'Analysis' : view === 'prevention' ? 'Decision support' : view === 'users' ? 'Administration' : 'Data management'} <span>/</span> <strong>{view === 'map' ? 'Geospatial intelligence' : view === 'analytics' ? 'Analytics' : view === 'prevention' ? 'Prevention planner' : view === 'users' ? 'Users' : 'Incidents'}</strong></span><div className="auth-actions"><span className="auth-role-chip">{user.role}</span><button type="button" className="button subtle" onClick={() => setAccountOpen(true)}><KeyRound size={16} /> Password</button><button type="button" className="button subtle" onClick={logout}><LogOut size={16} /> Sign out</button></div></header>
         <div className="content">
-          {view === 'users' && isAdmin ? <Suspense fallback={<div className="panel empty" role="status">Loading user management…</div>}><Users currentUser={user} /></Suspense> : view === 'analytics' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} canAnalyze={canAnalyze} /> : <>
+          {view === 'users' && isAdmin ? <Suspense fallback={<div className="panel empty" role="status">Loading user management…</div>}><Users currentUser={user} /></Suspense> : view === 'prevention' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">Loading synthetic prevention planner…</div>}><Prevention canWrite={canWrite} refresh={refresh} /></Suspense> : view === 'analytics' && canAnalyze ? <Suspense fallback={<div className="panel empty" role="status">SYNTHETIC DEMONSTRATION DATA · Loading analytics…</div>}><AnalyticsDashboard refresh={refresh} /></Suspense> : view === 'map' ? <CrimeMap refresh={refresh} canAnalyze={canAnalyze} /> : <>
           <div className="heading-row">
             <div><div className="eyebrow">MODULE 01 · INCIDENT MANAGEMENT</div><h1>Crime incident records</h1><p className="intro">Manage location-based incident data for mapping and analysis.</p></div>
             {canWrite && <button className="button primary" onClick={() => setIsOpen(true)}><Plus size={17} /> Add incident</button>}
@@ -248,7 +250,7 @@ function App() {
           </section>
 
           {canWrite && <section className="import-panel"><div className="import-icon"><FileUp size={21} /></div><div><h3>Import incident data</h3><p>Upload a CSV or JSON file containing up to 1,000 synthetic records (maximum 2 MB). All rows are checked before anything is imported.</p><a href="/sample-data/synthetic_incidents.csv" download>Download example CSV</a></div><label className={`button outline upload-button ${busy ? 'disabled' : ''}`}><FileUp size={16} /> {busy ? 'Please wait…' : 'Choose file'}<input disabled={busy} aria-label="Import CSV or JSON incidents" type="file" accept=".csv,.json" onChange={handleImport} hidden /></label></section>}
-          <footer className="footer">CrimeMap · Modules 01–03 <span>Designed for geospatial intelligence prototyping · No real incident data</span></footer>
+          <footer className="footer">CrimeMap · Modules 01–04 <span>Designed for geospatial intelligence prototyping · No real incident data</span></footer>
           </>}
         </div>
       </main>
