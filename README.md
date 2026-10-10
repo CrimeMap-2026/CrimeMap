@@ -105,7 +105,8 @@ CrimeMap/
 ├── frontend/            React/Vite app and static sample CSV
 ├── data/                Canonical 100-record synthetic seed
 ├── docs/
-│   ├── SETUP.md         Developer setup, security, database and troubleshooting
+│   ├── SETUP.md         Local setup, security, databases and testing
+│   ├── CLOUD_DEPLOYMENT.md  Deployed Cloud Run architecture and teammate runbook
 │   └── DEMO.md          Five-minute demo and manual QA checklist
 ├── compose.yaml         Optional local PostgreSQL
 └── start.py             Start FastAPI + Vite together
@@ -113,7 +114,7 @@ CrimeMap/
 
 ## Google Cloud Run deployment
 
-The repository includes a production multistage `Dockerfile` for **one HTTPS frontend/API URL** and an explicit Cloud SQL PostgreSQL mode (no ephemeral SQLite fallback). Accounts and fictional seed data are initialized **once** by a restricted Cloud Run Job, not by web-server startup. To deploy, see **[Cloud Run + Cloud SQL in Developer setup](docs/SETUP.md#google-cloud-run--cloud-sql-deployment-synthetic-demo-only)**. Provisioning Google Cloud services is manual and may consume trial credits; nothing is deployed or billed by cloning this repository.
+The repository includes a production multistage `Dockerfile` for **one HTTPS frontend/API URL** and an explicit Cloud SQL PostgreSQL mode (no ephemeral SQLite fallback). Accounts and fictional seed data are initialized **once** by a restricted Cloud Run Job, not by web-server startup. For the **live resource inventory, deployment walkthrough, Cloud Shell commands, teammate access and operations**, read **[Cloud deployment and teammate handoff](docs/CLOUD_DEPLOYMENT.md)**. Provisioning Google Cloud services is manual and may consume trial credits; nothing is deployed or billed by cloning this repository.
 
 ## Testing and demo
 
