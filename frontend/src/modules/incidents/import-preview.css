@@ -40,12 +40,12 @@
 
 /* Keep the import explanation, chooser and preview in stacked full-width rows.
    Previously, flex laid all three beside each other and squeezed the intro. */
-.import-panel{flex-direction:column;align-items:stretch;gap:14px}
-.import-panel-header{display:flex;align-items:center;gap:16px;min-width:0}
+.import-panel.import-panel-stacked{flex-direction:column;align-items:stretch;gap:14px}
+.import-panel.import-panel-stacked .import-panel-header{display:flex;align-items:center;gap:16px;min-width:0}
 .import-panel-copy{flex:1;min-width:0}
-.import-panel .upload-button{align-self:flex-start;margin-left:0;flex-shrink:0}
-.import-panel .import-review{flex:none;width:100%;min-width:0;margin-top:3px}
+.import-panel.import-panel-stacked > .upload-button{align-self:flex-start;margin-left:0;flex-shrink:0}
+.import-panel.import-panel-stacked .import-review{flex:none;width:100%;min-width:0;margin-top:3px}
 @media(max-width:600px){
-  .import-panel-header{align-items:flex-start}
-  .import-panel .upload-button{margin-left:0;align-self:flex-start}
+  .import-panel.import-panel-stacked .import-panel-header{align-items:flex-start}
+  .import-panel.import-panel-stacked > .upload-button{margin-left:0;align-self:flex-start}
 }
