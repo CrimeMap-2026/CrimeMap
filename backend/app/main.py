@@ -23,6 +23,7 @@ from .hotspot_comparison import router as hotspot_comparison_router
 from .operations import router as operations_router
 from .prevention import router as prevention_router
 from .prevention_review import router as prevention_review_router
+from .reports import router as reports_router
 from .auth import router as auth_router, require_permission, check_request_origin
 from .schemas import Category, ImportResult, IncidentCreate, IncidentPage, IncidentPatch, IncidentRead, Status
 
@@ -43,6 +44,7 @@ app.include_router(hotspot_comparison_router)
 app.include_router(operations_router)
 app.include_router(prevention_router)
 app.include_router(prevention_review_router)
+app.include_router(reports_router)
 app.include_router(auth_router)
 app.include_router(audit_router)
 
