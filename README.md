@@ -153,6 +153,8 @@ Vehicle Theft,2026-09-12T21:30:00+05:30,11.9345,79.8302,Demo Zone A,SYNTHETIC TE
 
 JSON can be an array of objects with these fields or `{ "incidents": [ ... ] }`. The ISO 8601 `occurred_at` timestamp **must include a timezone**, for example `+05:30` or `Z`. Valid statuses: `reported`, `under_investigation`, and `closed`. Valid categories are listed in `backend/app/schemas.py`.
 
+Both the import preview and confirmed import recognize the optional `id` column in the bundled `data/synthetic_incidents.csv` (e.g. `DEMO-0001`). It is **read-only source metadata**, not a client-assigned record ID: imported new records receive server-generated IDs, and possible matches already seeded in the database are shown as duplicates. Unrecognized extra columns remain invalid. The bundled CSV is not defective and does not need manual editing.
+
 For demonstration safety, the API **always** sets `source_type` to `synthetic`, never to `official`, including imported records. Files may contain up to 1,000 rows / 2 MB. Imports are transactional.
 
 **Import workflow:** Open **Incidents → Import incident data → Choose file**. A read-only preview displays all rows' statuses, a count of ready/duplicate/invalid rows and optional warnings. Fix any invalid row in the source file and reselect it. If the remaining records look correct, click **Import new records**. The confirmed import revalidates the upload and skips potential duplicates by default. Nothing is written during preview; uploads do not modify the existing 100 seeded records.
