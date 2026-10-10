@@ -158,3 +158,36 @@ jobs:
             Write-Host 'Launcher stderr:'
             if (Test-Path $stderr) { Get-Content $stderr }
           }
+
+  cloudrun-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production Cloud Run image
+        run: docker build --tag crimemap-cloudrun:ci .
+      - name: Smoke-test compiled UI and protected API from one container
+        run: |
+          docker run -d --name crimemap-cloudrun-ci \
+            -p 127.0.0.1:8080:8080 \
+            -e CRIMEMAP_DEPLOYMENT=local \
+            -e DATABASE_URL=sqlite:////tmp/crimemap-cloudrun-ci.db \
+            crimemap-cloudrun:ci
+          trap 'docker logs crimemap-cloudrun-ci; docker rm -f crimemap-cloudrun-ci >/dev/null 2>&1 || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:8080/health | grep -q '"status":"ok"'; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          curl --fail --silent http://127.0.0.1:8080/ | grep -q '<div id="root">'
+          curl --fail --silent http://127.0.0.1:8080/sample-data/synthetic_incidents.csv | head -n 1 | grep -q 'category'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/api/incidents)" = "401"
+      - name: Reject cloud deployment without Cloud SQL config
+        run: |
+          if docker run --rm crimemap-cloudrun:ci python -c "import app.db"; then
+            echo "Cloud mode must not boot without Cloud SQL configuration" >&2
+            exit 1
+          fi
