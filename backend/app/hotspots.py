@@ -17,6 +17,7 @@ from .db import get_db
 from .auth import require_permission
 from .models import Incident
 from .schemas import Category, Status
+from .spatial_filters import incident_conditions
 
 router = APIRouter(prefix="/api/hotspots", tags=["hotspots"], dependencies=[Depends(require_permission("analyze"))])
 
@@ -129,24 +130,10 @@ def grid(
     cell_size_m: Annotated[int, Query(ge=250, le=5000)] = 1000,
     min_count: Annotated[int, Query(ge=2, le=1000)] = 3,
 ):
-    if start_date and end_date and start_date > end_date:
-        raise HTTPException(422, "start_date must be on or before end_date")
-    if zone is not None and (unspecified_zone or not zone.strip()):
-        raise HTTPException(422, "Choose a named zone or unspecified_zone, not both")
-
-    conditions = [Incident.source_type == "synthetic"]
-    if start_date:
-        conditions.append(Incident.occurred_at >= utc_boundary(start_date))
-    if end_date:
-        conditions.append(Incident.occurred_at <= utc_boundary(end_date, end=True))
-    if category is not None:
-        conditions.append(Incident.category == category.value)
-    if status is not None:
-        conditions.append(Incident.status == status.value)
-    if zone is not None:
-        conditions.append(zone_expression() == zone.strip())
-    if unspecified_zone:
-        conditions.append(zone_expression().is_(None))
+    conditions = incident_conditions(
+        start_date=start_date, end_date=end_date, category=category, status=status,
+        zone=zone, unspecified_zone=unspecified_zone,
+    )
 
     matching = select(Incident.latitude, Incident.longitude).where(*conditions).cte("matching_incidents")
     x = grid_index(matching.c.longitude, REFERENCE_LONGITUDE, LONGITUDE_METERS_PER_DEGREE, cell_size_m)
