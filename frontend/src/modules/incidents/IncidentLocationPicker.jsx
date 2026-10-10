@@ -25,6 +25,7 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const placePinRef = useRef(null);
   const latestCallback = useRef(onChange);
   const latestDisabled = useRef(disabled);
   const selected = validIncidentPosition(latitude, longitude);
@@ -66,6 +67,8 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
       if (notify) latestCallback.current({ latitude: lat, longitude: lng });
     }
 
+    placePinRef.current = setPin;
+
     // Restore the position when reopening an unfinished draft.
     if (validIncidentPosition(latitude, longitude)) {
       setPin({ lat: latitude, lng: longitude }, false);
@@ -84,6 +87,7 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
+      placePinRef.current = null;
     };
     // The map is created once per form mount. Later position changes sync below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,7 +114,7 @@ export default function IncidentLocationPicker({ latitude, longitude, onChange, 
   function chooseCenter() {
     if (disabled || !mapRef.current) return;
     const { lat, lng } = mapRef.current.getCenter();
-    if (validIncidentPosition(lat, lng)) onChange({ latitude: lat, longitude: lng });
+    if (validIncidentPosition(lat, lng)) placePinRef.current?.({ lat, lng }, true);
   }
 
   function resetMap() {
