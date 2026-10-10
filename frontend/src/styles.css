@@ -109,3 +109,8 @@ textarea:focus-visible,summary:focus-visible{
   .button{transition:none}
   html:focus-within{scroll-behavior:auto}
 }
+
+/* Do not disguise an API error as an empty incident dataset. */
+.registry-error{display:flex;flex-direction:column;align-items:center;gap:12px;
+  font-size:14px;line-height:1.5;color:#ffd3da;white-space:normal}
+.registry-error .button{align-self:center}
