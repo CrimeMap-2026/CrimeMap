@@ -248,7 +248,7 @@ function App() {
             <div className="table-footer"><span>Showing {data.total ? data.offset + 1 : 0}–{Math.min(data.offset + data.items.length, data.total)} of {data.total}</span><div className="pagination"><button className="button subtle" disabled={filters.offset === 0 || loading} onClick={() => setFilters((current) => ({ ...current, offset: Math.max(0, current.offset - current.limit) }))}><ArrowLeft size={15} /> Previous</button><button className="button subtle" disabled={filters.offset + filters.limit >= data.total || loading} onClick={() => setFilters((current) => ({ ...current, offset: current.offset + current.limit }))}>Next <ArrowRight size={15} /></button></div></div>
           </section>
 
-          {canWrite && <section className="import-panel" aria-label="Import incident data">
+          {canWrite && <section className="import-panel import-panel-stacked" aria-label="Import incident data">
             <div className="import-panel-header">
               <div className="import-icon"><FileUp size={21} /></div>
               <div className="import-panel-copy">
