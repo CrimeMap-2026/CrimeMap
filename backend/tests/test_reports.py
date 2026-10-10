@@ -75,7 +75,7 @@ def test_report_section_selection_filters_and_empty_datasets(client):
     assert "Matching incidents" in text
     assert "Local incident range" in text
 
-    only_map = pdf(client, sections="spatial", cell_size_m=500, min_count=2)
+    only_map = pdf(client, sections="spatial", cell_size_m=500, min_count=3)
     _, text = read_pdf(only_map)
     assert "Fixed-grid geographic concentrations" in text
     assert "500 metre" in text
