@@ -3,12 +3,13 @@ import {
   ArrowLeft, ArrowRight, Database, FileUp, Filter, LayoutDashboard, UsersRound, LogOut, KeyRound, HeartHandshake,
   MapPinned, Plus, Search, ShieldCheck, Trash2, X, AlertCircle, CheckCircle2,
 } from 'lucide-react';
-import { CATEGORIES, STATUSES, changeStatus, changeOwnPassword, createIncident, importIncidents, listIncidents, removeIncident, signOut, whoAmI } from './api';
+import { CATEGORIES, STATUSES, changeStatus, changeOwnPassword, createIncident, listIncidents, removeIncident, signOut, whoAmI } from './api';
 import Login from './modules/auth/Login.jsx';
 import './modules/auth/auth.css';
 import CrimeMap from './modules/map/CrimeMap.jsx';
 import IncidentLocationPicker, { validIncidentPosition } from './modules/incidents/IncidentLocationPicker.jsx';
 import { locationFieldsForPin } from './modules/incidents/location-utils.js';
+import ImportPreview from './modules/incidents/ImportPreview.jsx';
 
 const AnalyticsDashboard = lazy(() => import('./modules/analytics/AnalyticsDashboard.jsx'));
 const Users = lazy(() => import('./modules/auth/Users.jsx'));
@@ -160,20 +161,9 @@ function App() {
     }
   }
 
-  async function handleImport(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setBusy(true);
-    try {
-      const result = await importIncidents(file);
-      feedback('success', `${result.imported} synthetic records imported successfully.`);
-      setRefresh((value) => value + 1);
-    } catch (error) {
-      feedback('error', error.message);
-    } finally {
-      setBusy(false);
-      event.target.value = '';
-    }
+  function handleImportComplete(result) {
+    feedback('success', `${result.imported} synthetic record${result.imported === 1 ? '' : 's'} imported. ${result.skipped || 0} possible duplicate${result.skipped === 1 ? '' : 's'} skipped.`);
+    setRefresh((value) => value + 1);
   }
 
   async function handleStatus(id, nextStatus) {
@@ -258,7 +248,7 @@ function App() {
             <div className="table-footer"><span>Showing {data.total ? data.offset + 1 : 0}–{Math.min(data.offset + data.items.length, data.total)} of {data.total}</span><div className="pagination"><button className="button subtle" disabled={filters.offset === 0 || loading} onClick={() => setFilters((current) => ({ ...current, offset: Math.max(0, current.offset - current.limit) }))}><ArrowLeft size={15} /> Previous</button><button className="button subtle" disabled={filters.offset + filters.limit >= data.total || loading} onClick={() => setFilters((current) => ({ ...current, offset: current.offset + current.limit }))}>Next <ArrowRight size={15} /></button></div></div>
           </section>
 
-          {canWrite && <section className="import-panel"><div className="import-icon"><FileUp size={21} /></div><div><h3>Import incident data</h3><p>Upload a CSV or JSON file containing up to 1,000 synthetic records (maximum 2 MB). All rows are checked before anything is imported.</p><a href="/sample-data/synthetic_incidents.csv" download>Download example CSV</a></div><label className={`button outline upload-button ${busy ? 'disabled' : ''}`}><FileUp size={16} /> {busy ? 'Please wait…' : 'Choose file'}<input disabled={busy} aria-label="Import CSV or JSON incidents" type="file" accept=".csv,.json" onChange={handleImport} hidden /></label></section>}
+          {canWrite && <section className="import-panel"><div className="import-icon"><FileUp size={21} /></div><div><h3>Import incident data</h3><p>Upload a CSV or JSON file containing up to 1,000 synthetic records (maximum 2 MB). Preview validation errors, warnings and possible duplicates before confirming. Valid new rows are imported only after your approval.</p><a href="/sample-data/synthetic_incidents.csv" download>Download example CSV</a></div><ImportPreview disabled={busy} onImported={handleImportComplete} /></section>}
           <footer className="footer">CrimeMap · Modules 01–04 <span>Designed for geospatial intelligence prototyping · No real incident data</span></footer>
           </>}
         </div>
