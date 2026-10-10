@@ -27,7 +27,7 @@ const number = value => Number(value || 0).toLocaleString('en-IN');
 const safeFileCell = value => {
   // Escape formula-like input so spreadsheet apps do not execute user-supplied text.
   const plain = String(value ?? '');
-  const escaped = /^[\\s]*[=+@-]/.test(plain) ? "'" + plain : plain;
+  const escaped = /^\s*[=+@-]/.test(plain) ? "'" + plain : plain;
   return '"' + escaped.replaceAll('"', '""') + '"';
 };
 
