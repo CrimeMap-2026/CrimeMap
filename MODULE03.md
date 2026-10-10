@@ -46,6 +46,16 @@ Dates and hours refer to occurrence time. Stored UTC timestamps remain unchanged
 
 Returns `categories`, `statuses`, sorted distinct named `zones`, `has_unspecified_zone`, and the synthetic labels. Options cover the whole synthetic dataset so users can change a filter even after a zero-result selection. Both endpoints explicitly exclude any non-synthetic records.
 
+## Consolidated PDF presentation export
+
+From the **existing Analytics page**, open **Build presentation PDF** beneath the filters. Choose which portions to include: **Incident analytics** (summary, vector bar charts and trend), **Fixed-grid geographic findings** (top-count cells and a schematic relative-position graphic) and **Saved prevention plans** (human-reviewed plan summaries). The PDF is generated on demand by ReportLab and downloaded as `crimemap-synthetic-presentation.pdf`.
+
+`GET /api/reports/presentation` is authorized at **Analyst or higher** and accepts the same optional filters as `/api/analytics/overview`, plus comma-separated `sections=analytics,spatial,prevention`, `cell_size_m` (250 to 5000) and `min_count` (2 to 1000). Report sections use the existing Analytics and Geospatial Intelligence aggregate implementations directly; there is no new map, duplicate aggregation code or separate Reports page. Grid counts are computed for the same category/status/date/zone filters as analytics.
+
+The saved-plan summary shows up to 12 latest plans matching a selected category/zone, as well as the full matching plan count. **The incident dates and status filter do not apply to saved plans**, which are lifecycle records rather than incident observations. Charts and relative cell positions are original vector graphics, not downloaded OpenStreetMap tiles. An outline of reporting limitations is included in the PDF. It deliberately omits individual incident coordinates, descriptions, coordinators and progress notes.
+
+For the new export, **install ReportLab into your existing backend venv** after pulling: `cd backend && .venv/bin/python -m pip install -r requirements.txt`. Never delete or recreate the SQLite database to install this feature. The route is read-only, streams a fresh PDF and leaves the database untouched.
+
 ## Start on Fedora with Fish
 
 Backend terminal (reuse the existing virtual environment and database):
