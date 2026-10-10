@@ -11,6 +11,7 @@ import { incidentMapFocus } from './modules/map/incident-focus.js';
 import IncidentLocationPicker, { validIncidentPosition } from './modules/incidents/IncidentLocationPicker.jsx';
 import { locationFieldsForPin } from './modules/incidents/location-utils.js';
 import ImportPreview from './modules/incidents/ImportPreview.jsx';
+import { validIncidentPageOffset } from './modules/incidents/pagination-utils.js';
 import { useDialogFocus } from './hooks/useDialogFocus.js';
 
 const AnalyticsDashboard = lazy(() => import('./modules/analytics/AnalyticsDashboard.jsx'));
@@ -59,6 +60,7 @@ function App() {
   const [isOpen, setIsOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [registryError, setRegistryError] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
   const canAnalyze = Boolean(user && ANALYTIC_ROLES.includes(user.role));
@@ -92,11 +94,22 @@ function App() {
     if (!user) return;
     const controller = new AbortController();
     setLoading(true);
+    setRegistryError('');
     listIncidents(filters, controller.signal)
-      .then((result) => { setData(result); setLoading(false); })
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        const safeOffset = validIncidentPageOffset(filters.offset, filters.limit, result.total);
+        if (safeOffset !== filters.offset) {
+          setFilters(current => ({ ...current, offset: safeOffset }));
+          return;
+        }
+        setData(result);
+        setLoading(false);
+      })
       .catch((error) => {
         if (controller.signal.aborted) return;
-        setNotice({ type: 'error', text: error.message });
+        setRegistryError(error.message || 'Could not load incident records.');
+        setData({ items: [], total: 0, limit: filters.limit, offset: 0 });
         setLoading(false);
       });
     return () => controller.abort();
@@ -261,7 +274,11 @@ function App() {
               <button className="button subtle" onClick={() => setFilters(initialFilters)} title="Reset filters"><X size={16} /> Clear</button>
             </div>
             <div className="table-wrap"><table><thead><tr><th>INCIDENT ID</th><th>CATEGORY</th><th>DATE & TIME (IST)</th><th>AREA / ZONE</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>
-              {loading ? <tr><td colSpan={6} className="empty">Loading incidents…</td></tr> : data.items.length === 0 ? <tr><td colSpan={6} className="empty">No incidents found. Add one or import the sample dataset.</td></tr> : data.items.map((incident) => <tr key={incident.id}>
+              {loading ? <tr><td colSpan={6} className="empty">Loading incidents…</td></tr> : registryError ? <tr><td colSpan={6} className="empty">
+                  <div className="registry-error" role="alert">{registryError}
+                    <button className="button subtle" type="button" onClick={() => setRefresh(value => value + 1)}>Retry loading incidents</button>
+                  </div>
+                </td></tr> : data.items.length === 0 ? <tr><td colSpan={6} className="empty">No incidents found. Add one or import the sample dataset.</td></tr> : data.items.map((incident) => <tr key={incident.id}>
                 <td><strong className="mono">{incident.id.startsWith('DEMO-') ? incident.id : incident.id.slice(0, 8)}</strong><span className="subcell">Synthetic record</span></td>
                 <td><span className="category-chip">{incident.category}</span></td>
                 <td>{formattedDate(incident.occurred_at)}</td>
