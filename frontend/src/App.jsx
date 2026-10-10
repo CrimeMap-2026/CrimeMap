@@ -248,7 +248,17 @@ function App() {
             <div className="table-footer"><span>Showing {data.total ? data.offset + 1 : 0}–{Math.min(data.offset + data.items.length, data.total)} of {data.total}</span><div className="pagination"><button className="button subtle" disabled={filters.offset === 0 || loading} onClick={() => setFilters((current) => ({ ...current, offset: Math.max(0, current.offset - current.limit) }))}><ArrowLeft size={15} /> Previous</button><button className="button subtle" disabled={filters.offset + filters.limit >= data.total || loading} onClick={() => setFilters((current) => ({ ...current, offset: current.offset + current.limit }))}>Next <ArrowRight size={15} /></button></div></div>
           </section>
 
-          {canWrite && <section className="import-panel"><div className="import-icon"><FileUp size={21} /></div><div><h3>Import incident data</h3><p>Upload a CSV or JSON file containing up to 1,000 synthetic records (maximum 2 MB). Preview validation errors, warnings and possible duplicates before confirming. Valid new rows are imported only after your approval.</p><a href="/sample-data/synthetic_incidents.csv" download>Download example CSV</a></div><ImportPreview disabled={busy} onImported={handleImportComplete} /></section>}
+          {canWrite && <section className="import-panel" aria-label="Import incident data">
+            <div className="import-panel-header">
+              <div className="import-icon"><FileUp size={21} /></div>
+              <div className="import-panel-copy">
+                <h3>Import incident data</h3>
+                <p>Upload a CSV or JSON file containing up to 1,000 synthetic records (maximum 2 MB). Review invalid rows and possible duplicates before confirming; nothing is written during preview.</p>
+                <a href="/sample-data/synthetic_incidents.csv" download>Download example CSV</a>
+              </div>
+            </div>
+            <ImportPreview disabled={busy} onImported={handleImportComplete} />
+          </section>}
           <footer className="footer">CrimeMap · Modules 01–04 <span>Designed for geospatial intelligence prototyping · No real incident data</span></footer>
           </>}
         </div>
