@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db
 from .models import Incident
+from .audit import router as audit_router, record_event
+from .auth_models import User
 from .analytics import router as analytics_router
 from .hotspots import router as hotspots_router
 from .hotspot_comparison import router as hotspot_comparison_router
@@ -39,6 +41,7 @@ app.include_router(hotspot_comparison_router)
 app.include_router(operations_router)
 app.include_router(prevention_router)
 app.include_router(auth_router)
+app.include_router(audit_router)
 
 
 @app.middleware("http")
@@ -175,9 +178,15 @@ def map_incidents(
 
 
 @app.post("/api/incidents", response_model=IncidentRead, status_code=201, dependencies=[Depends(require_permission("write"))])
-def add_incident(payload: IncidentCreate, db: Annotated[Session, Depends(get_db)]):
+def add_incident(
+    payload: IncidentCreate, db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_permission("write"))],
+):
     record = new_record(payload)
     db.add(record)
+    record_event(db, actor, "incident.created", "incident", record.id, {
+        "category": record.category, "status": record.status,
+    })
     db.commit()
     return to_read(record)
 
@@ -191,27 +200,48 @@ def get_incident(incident_id: str, db: Annotated[Session, Depends(get_db)]):
 
 
 @app.patch("/api/incidents/{incident_id}", response_model=IncidentRead, dependencies=[Depends(require_permission("write"))])
-def update_incident(incident_id: str, payload: IncidentPatch, db: Annotated[Session, Depends(get_db)]):
+def update_incident(
+    incident_id: str, payload: IncidentPatch,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_permission("write"))],
+):
     record = db.get(Incident, incident_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Incident not found")
     changes = payload.model_dump(exclude_unset=True)
+    old_status = record.status
+    old_description = record.description
     if "status" in changes:
         if changes["status"] is None:
             raise HTTPException(status_code=422, detail="status cannot be null")
         record.status = changes["status"].value
     if "description" in changes:
         record.description = changes["description"]
+    audit_changes = {}
+    if old_status != record.status:
+        audit_changes["status_before"] = old_status
+        audit_changes["status_after"] = record.status
+    if old_description != record.description:
+        # Never place incident descriptions (potentially sensitive text) in the audit log.
+        audit_changes["description_changed"] = True
+    if audit_changes:
+        record_event(db, actor, "incident.updated", "incident", record.id, audit_changes)
     db.commit()
     return to_read(record)
 
 
 @app.delete("/api/incidents/{incident_id}", status_code=204, dependencies=[Depends(require_permission("delete"))])
-def delete_incident(incident_id: str, db: Annotated[Session, Depends(get_db)]):
+def delete_incident(
+    incident_id: str, db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_permission("delete"))],
+):
     record = db.get(Incident, incident_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Incident not found")
     db.delete(record)
+    record_event(db, actor, "incident.deleted", "incident", record.id, {
+        "category": record.category, "status": record.status,
+    })
     db.commit()
 
 
@@ -240,7 +270,11 @@ def decode_import(filename: str, raw: bytes) -> list[dict]:
 
 
 @app.post("/api/incidents/import", response_model=ImportResult, status_code=201, dependencies=[Depends(require_permission("write"))])
-async def import_incidents(db: Annotated[Session, Depends(get_db)], file: UploadFile = File(...)):
+async def import_incidents(
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_permission("write"))],
+    file: UploadFile = File(...),
+):
     raw = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(raw) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="File exceeds 2 MB")
@@ -260,5 +294,9 @@ async def import_incidents(db: Annotated[Session, Depends(get_db)], file: Upload
             raise HTTPException(status_code=422, detail={"row": i, "errors": exc.errors(include_context=False, include_url=False)}) from exc
     # Validation completes before any record is persisted.
     db.add_all(new_record(item) for item in parsed)
+    # One aggregate event for the whole import; do not leak imported descriptions.
+    record_event(db, actor, "incident.imported", "incident_import", details={
+        "record_count": len(parsed),
+    })
     db.commit()
     return ImportResult(imported=len(parsed))
