@@ -87,3 +87,60 @@
   .prevention-page .prevention-method p{display:block}
   .prevention-page .prevention-observation,.prevention-plan{padding:10px!important}
 }
+
+/* Completed-plan observation review, inside the existing Prevention Planner. */
+.prevention-review{margin:19px 0 4px;padding:21px;display:grid;gap:17px;min-width:0}
+.prevention-review-heading{display:flex;justify-content:space-between;align-items:start;gap:15px;flex-wrap:wrap}
+.prevention-review-heading .eyebrow{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.prevention-review-heading h2{font-size:20px;color:#eaf4ff}
+.prevention-review-heading p{font-size:13px;color:#b9cee5;line-height:1.6;margin-top:7px}
+.prevention-review-heading>button{flex-shrink:0}
+.prevention-review-caution{border-left:3px solid #e0ba72;background:#2b2c29;padding:12px 15px;
+  color:#f2ddb2;font-size:13px;line-height:1.7;border-radius:7px}
+.prevention-review-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.prevention-review-form fieldset{min-width:0;border:1px solid #38516f;padding:12px;border-radius:9px;margin:0}
+.prevention-review-form legend{font-size:14px;font-weight:700;color:#d9eafd;padding:0 7px}
+.prevention-review-date-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.prevention-review-date-fields label{display:grid;gap:7px;color:#bed1e7;font-weight:600;font-size:13px}
+.prevention-review-date-fields input{background:#17283c;border:1px solid #3d5977;color:#e8f2ff;
+  border-radius:7px;padding:9px 10px;font-size:13px;min-width:0;min-height:43px;color-scheme:dark}
+.prevention-review-action{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.prevention-review-action p{color:#b9ccdf;font-size:12px;line-height:1.5}
+.prevention-review-error,.prevention-review-form .prevention-pending{grid-column:1/-1;margin:0;color:#ffbdc7;font-size:13px;line-height:1.6}
+.prevention-review-error .button{margin-left:10px}
+.prevention-review-loading{font-size:14px;color:#c8daee}
+.prevention-review-result{display:grid;gap:17px;border-top:1px solid #2e4562;padding-top:19px}
+.prevention-review-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+  color:#b6cce3;font-size:13px}
+.prevention-review-meta strong{color:#eaf4ff}
+.prevention-review-bars{display:grid;gap:18px}
+.prevention-review-bar-heading{display:flex;flex-wrap:wrap;align-items:center;gap:7px 13px;margin-bottom:7px}
+.prevention-review-bar-heading strong{font-size:14px;color:#e9f3ff}
+.prevention-review-bar-heading span{font-size:12px;color:#b2cae5}
+.prevention-review-bar-heading b{margin-left:auto;font-size:14px;color:#f5f9ff}
+.prevention-review-bar-track{background:#1d3048;border:1px solid #324e6b;height:21px;border-radius:5px;overflow:hidden}
+.prevention-review-bar{height:100%;border-radius:4px;transition:width .2s ease}
+.prevention-review-bar.earlier{background:#74a8e2}
+.prevention-review-bar.later{background:#b3a0e2}
+.prevention-review-difference{font-size:14px;color:#c5d8ed;line-height:1.6}
+.prevention-review-difference strong{color:#ecf5ff}
+.prevention-review-limitations{display:flex;gap:12px;background:#1e2c3f;border:1px solid #3e516a;
+  border-radius:8px;padding:15px;color:#c5d5e6}
+.prevention-review-limitations svg{flex-shrink:0;color:#f1c581;margin-top:2px}
+.prevention-review-limitations strong{font-size:14px;color:#f0dca7}
+.prevention-review-limitations p,.prevention-review-limitations li{font-size:12px;line-height:1.65;margin-top:6px}
+.prevention-review-limitations ul{margin:8px 0 0 16px;padding:0}
+@media(max-width:900px){.prevention-review-form{grid-template-columns:1fr}}
+@media(max-width:570px){.prevention-review{padding:15px}.prevention-review-date-fields{grid-template-columns:1fr}
+  .prevention-review-heading>button{width:100%}.prevention-review-action .button{width:100%}}
+@media print{
+  .prevention-review form,.prevention-review-heading>button,.prevention-review-caution{display:none!important}
+  .prevention-review{background:#fff!important;color:#111!important;border:1px solid #aaa}
+  .prevention-review-result{display:grid!important}
+  .prevention-review-meta,.prevention-review-bar-heading,.prevention-review-difference,
+  .prevention-review-limitations,.prevention-review-limitations p,.prevention-review-limitations li{color:#111!important}
+  .prevention-review-limitations{background:#fff!important;border:1px solid #bbb!important}
+  .prevention-review-bar-track{background:#ddd!important}
+  .prevention-review-bar.earlier{background:#597ba1!important}
+  .prevention-review-bar.later{background:#9c85ba!important}
+}
