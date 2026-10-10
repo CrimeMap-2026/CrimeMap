@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .analytics import utc_boundary, zone_expression
+from .audit import record_event
 from .auth import User, current_user, require_permission
 from .db import get_db
 from .models import Incident
@@ -216,6 +217,10 @@ def create_plan(
         created_by=user.id, created_at=timestamp, updated_at=timestamp,
     )
     db.add(item)
+    record_event(db, user, "prevention_plan.created", "prevention_plan", item.id, {
+        "category": item.category, "status": item.status,
+        "action_code": item.action_code, "evidence_count": item.evidence_count,
+    })
     db.commit()
     db.refresh(item)
     return item
@@ -226,12 +231,16 @@ def update_plan(
     plan_id: str,
     body: PlanUpdate,
     db: Annotated[Session, Depends(get_db)],
-    _user: Annotated[User, Depends(require_permission("write"))],
+    actor: Annotated[User, Depends(require_permission("write"))],
 ):
     item = db.get(PreventionPlan, plan_id)
     if item is None:
         raise HTTPException(404, "Action plan not found")
     changes = body.model_dump(exclude_unset=True)
+    before = {
+        "status": item.status, "owner": item.owner,
+        "due_date": item.due_date, "notes": item.notes,
+    }
     if not changes:
         raise HTTPException(422, "Specify a status, owner, due date or notes change")
     allowed = {
@@ -255,7 +264,21 @@ def update_plan(
         item.due_date = changes["due_date"].isoformat() if changes["due_date"] else None
     if "notes" in changes:
         item.notes = changes["notes"]
-    item.updated_at = utc_now()
+    tracked = {}
+    if before["status"] != item.status:
+        tracked["status_before"] = before["status"]
+        tracked["status_after"] = item.status
+    if before["owner"] != item.owner:
+        tracked["owner_changed"] = True
+    if before["due_date"] != item.due_date:
+        tracked["due_date_before"] = before["due_date"]
+        tracked["due_date_after"] = item.due_date
+    if before["notes"] != item.notes:
+        # Notes may contain free text; record only that they were edited.
+        tracked["notes_changed"] = True
+    if tracked:
+        item.updated_at = utc_now()
+        record_event(db, actor, "prevention_plan.updated", "prevention_plan", item.id, tracked)
     db.commit()
     db.refresh(item)
     return item
