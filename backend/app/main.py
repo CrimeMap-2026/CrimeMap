@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db
 from .models import Incident
+from .import_review import parse_rows, review_rows
 from .audit import router as audit_router, record_event
 from .auth_models import User
 from .analytics import router as analytics_router
@@ -269,12 +270,7 @@ def decode_import(filename: str, raw: bytes) -> list[dict]:
     raise HTTPException(status_code=400, detail="Upload a .csv or .json file")
 
 
-@app.post("/api/incidents/import", response_model=ImportResult, status_code=201, dependencies=[Depends(require_permission("write"))])
-async def import_incidents(
-    db: Annotated[Session, Depends(get_db)],
-    actor: Annotated[User, Depends(require_permission("write"))],
-    file: UploadFile = File(...),
-):
+async def read_import_file(file: UploadFile) -> list[dict]:
     raw = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(raw) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="File exceeds 2 MB")
@@ -283,20 +279,55 @@ async def import_incidents(
         raise HTTPException(status_code=400, detail="No incident records found")
     if len(rows) > MAX_ROWS:
         raise HTTPException(status_code=413, detail="Maximum 1000 records per import")
-    parsed = []
-    for i, row in enumerate(rows, start=1):
-        if not isinstance(row, dict):
-            raise HTTPException(status_code=422, detail={"row": i, "error": "Record must be an object"})
-        normalized = {k: (v if v != "" else None) for k, v in row.items()}
-        try:
-            parsed.append(IncidentCreate.model_validate(normalized))
-        except ValidationError as exc:
-            raise HTTPException(status_code=422, detail={"row": i, "errors": exc.errors(include_context=False, include_url=False)}) from exc
-    # Validation completes before any record is persisted.
-    db.add_all(new_record(item) for item in parsed)
-    # One aggregate event for the whole import; do not leak imported descriptions.
-    record_event(db, actor, "incident.imported", "incident_import", details={
-        "record_count": len(parsed),
-    })
-    db.commit()
-    return ImportResult(imported=len(parsed))
+    return rows
+
+
+@app.post("/api/incidents/import/preview", dependencies=[Depends(require_permission("write"))])
+async def preview_import(
+    db: Annotated[Session, Depends(get_db)],
+    file: UploadFile = File(...),
+):
+    """Read-only review: validation errors, possible duplicates, and nonblocking warnings."""
+    rows = await read_import_file(file)
+    parsed, invalid = parse_rows(rows, collect_errors=True)
+    review = review_rows(db, parsed, invalid)
+    return {
+        "source_type": "synthetic",
+        "total": review["total"],
+        "ready": review["ready"],
+        "duplicate_existing": review["duplicate_existing"],
+        "duplicate_file": review["duplicate_file"],
+        "invalid": review["invalid"],
+        "warnings": review["warnings"],
+        "rows": review["rows"],
+        "duplicate_rule": (
+            "Potential duplicate: same category, UTC second and location rounded to six "
+            "decimal places. Different events may have identical values; review before importing."
+        ),
+    }
+
+
+@app.post("/api/incidents/import", response_model=ImportResult, status_code=201,
+          dependencies=[Depends(require_permission("write"))])
+async def import_incidents(
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_permission("write"))],
+    file: UploadFile = File(...),
+    skip_duplicates: bool = False,
+):
+    rows = await read_import_file(file)
+    parsed, _ = parse_rows(rows, collect_errors=False)
+    if skip_duplicates:
+        review = review_rows(db, parsed, [])
+        selected = review["accepted"]
+        skipped = len(parsed) - len(selected)
+    else:
+        selected = [item for _, item in parsed]
+        skipped = 0
+    if selected:
+        db.add_all(new_record(item) for item in selected)
+        record_event(db, actor, "incident.imported", "incident_import", details={
+            "record_count": len(selected),
+        })
+        db.commit()
+    return ImportResult(imported=len(selected), skipped=skipped)
