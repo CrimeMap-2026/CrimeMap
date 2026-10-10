@@ -61,10 +61,17 @@ export function removeIncident(id) {
   return request(`/api/incidents/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
-export function importIncidents(file) {
+export function previewIncidents(file, signal) {
   const form = new FormData();
   form.append('file', file);
-  return request('/api/incidents/import', { method: 'POST', body: form });
+  return request('/api/incidents/import/preview', { method: 'POST', body: form, signal });
+}
+
+export function importIncidents(file, { skipDuplicates = false } = {}) {
+  const form = new FormData();
+  form.append('file', file);
+  const suffix = skipDuplicates ? '?skip_duplicates=true' : '';
+  return request('/api/incidents/import' + suffix, { method: 'POST', body: form });
 }
 
 export function fetchMapIncidents(bounds, filters, signal) {
