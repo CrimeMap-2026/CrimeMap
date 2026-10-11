@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { LockKeyhole, MapPinned, ShieldCheck } from 'lucide-react';
 import { signIn } from '../../api';
+import ThemeToggle from '../../components/ThemeToggle.jsx';
 import './auth.css';
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, theme, onToggleTheme }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [working, setWorking] = useState(false);
@@ -25,6 +26,7 @@ export default function Login({ onLogin }) {
   }
 
   return <main className="auth-screen">
+    <div className="auth-theme-switch"><ThemeToggle theme={theme} onToggle={onToggleTheme} /></div>
     <section className="auth-card" aria-labelledby="login-heading">
       <div className="auth-brand"><MapPinned size={27} /><strong>Crime<span>Map</span></strong></div>
       <div className="eyebrow">SYNTHETIC DEVELOPMENT WORKSPACE</div>
