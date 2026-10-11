@@ -1,0 +1,8 @@
+/*
+ * Tailwind CSS v4 utilities compiled by Vite.
+ * Keep preflight disabled: CrimeMap's existing CSS owns element resets and
+ * its original dark look. New interface elements can adopt utilities gradually.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
