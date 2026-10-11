@@ -116,6 +116,14 @@ CrimeMap/
 
 The repository includes a production multistage `Dockerfile` for **one HTTPS frontend/API URL** and an explicit Cloud SQL PostgreSQL mode (no ephemeral SQLite fallback). Accounts and fictional seed data are initialized **once** by a restricted Cloud Run Job, not by web-server startup. For the **live resource inventory, deployment walkthrough, Cloud Shell commands, teammate access and operations**, read **[Cloud deployment and teammate handoff](docs/CLOUD_DEPLOYMENT.md)**. Provisioning Google Cloud services is manual and may consume trial credits; nothing is deployed or billed by cloning this repository.
 
+## Appearance: projector light mode + dark mode
+
+**Light mode is the default** for bright-room projection, with stronger contrast for incident tables, maps, analytics, prevention planning, admin screens and sign-in. The **Light mode / Dark mode** toggle is available on both the login screen and in the workspace header. Your choice persists in this browser using `localStorage` (key `crimemap-theme`); it is not an account setting in the database.
+
+**Dark mode preserves the original navy/blue CrimeMap styling.** Tailwind CSS v4 is now integrated with Vite via `@tailwindcss/vite`, so utilities compile into the local and Cloud Run production bundle with no runtime CDN. Existing component CSS remains in place. Tailwind's global Preflight reset is deliberately excluded in `frontend/src/tailwind.css` to avoid breaking established styles, while `frontend/src/theme.css` holds the light-mode overrides. New UI code can gradually adopt Tailwind utility classes.
+
+**Cloud deployment:** pushing UI changes to GitHub does not automatically redeploy the existing Cloud Run service. After CI passes, follow [the deployment handoff's update procedure](docs/CLOUD_DEPLOYMENT.md#update-the-deployed-code-without-touching-data) to build a new image and deploy a new revision. Do not rerun the database initialization job.
+
 ## Testing and demo
 
 Run `cd backend && .venv/bin/python -m pytest -q` for backend tests; from `frontend/` run `npm test` and `npm run build`. CI also checks PostgreSQL schema/seed behavior. API route details are available in FastAPI's interactive [local API docs](http://127.0.0.1:8000/docs) when the server is running.
